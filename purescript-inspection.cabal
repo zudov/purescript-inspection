@@ -18,6 +18,7 @@ library
                        Purescript.Inspection.BuildConfig
                        Purescript.Inspection.Target
                        Purescript.Inspection.Task
+                       Purescript.Inspection.TaskQueue
   build-depends:       base >= 4.7 && < 5
                      , unordered-containers
                      , containers
