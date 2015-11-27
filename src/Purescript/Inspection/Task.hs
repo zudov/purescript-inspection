@@ -11,5 +11,11 @@ newtype TaskId = TaskId Int deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
 data Task = Task { taskBuildConfig :: BuildConfig
                  , taskTarget      :: Target
+                 , taskStatus      :: TaskStatus
                  }
           deriving (Show, Eq, Ord, Generic, Typeable)
+
+data TaskStatus = Scheduled
+                | Failed
+                | Completed
+                deriving (Show, Eq, Ord, Generic, Typeable)
