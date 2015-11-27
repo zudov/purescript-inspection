@@ -30,9 +30,11 @@ library
                      , wai-cors
                      , http-types
                      , http-client
+                     , network-uri
                      , wreq
                      , lens
                      , lens-aeson
+                     , semigroups
                      , aeson-extra
                      , text
                      , either
