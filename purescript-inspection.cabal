@@ -17,6 +17,7 @@ library
   exposed-modules:     Purescript.Inspection.ReleaseTag
                        Purescript.Inspection.BuildConfig
                        Purescript.Inspection.Target
+                       Purescript.Inspection.Task
   build-depends:       base >= 4.7 && < 5
                      , unordered-containers
                      , containers
