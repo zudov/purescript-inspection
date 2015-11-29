@@ -7,7 +7,7 @@ module Purescript.Inspection.BuildConfig where
 
 import Control.Monad
 import Data.Aeson.Extra
-import Data.Aeson.TH
+import Data.Aeson.Types
 import Data.Monoid
 import Data.Typeable (Typeable())
 import Data.Data (Data())
@@ -20,8 +20,8 @@ import Servant.Common.Text
 import Purescript.Inspection.ReleaseTag
 
 data BuildConfig
-  = BuildConfig { compiler        :: Compiler
-                , compilerRelease :: ReleaseTag
+  = BuildConfig { buildConfigCompiler        :: Compiler
+                , buildConfigCompilerRelease :: ReleaseTag
                 }
   deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
@@ -29,7 +29,9 @@ data Compiler = Purescript
               deriving (Eq, Show, Ord, Generic, Typeable, Data)
 
 instance ToText BuildConfig where
-  toText BuildConfig{..} = toText compiler <> "-" <> toText compilerRelease
+  toText BuildConfig{..} = toText buildConfigCompiler
+                        <> "-"
+                        <> toText buildConfigCompilerRelease
 
 instance FromText BuildConfig where
   fromText (Text.splitOn "-" -> [compiler, compilerRelease]) =
@@ -53,7 +55,12 @@ instance FromText Compiler where
 deriveSafeCopy 0 'base ''Compiler
 deriveSafeCopy 0 'base ''BuildConfig
 
-deriveToJSON defaultOptions ''BuildConfig
+instance ToJSON BuildConfig where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = modifier }
+    where
+      modifier "buildConfigCompiler" = "compiler"
+      modifier "buildConfigCompilerRelease" = "compilerRelease"
+      modifier a = a
 
 instance FromJSON Compiler where
   parseJSON (String s) = maybe mzero pure (fromText s)

@@ -46,11 +46,12 @@ selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion (TaskQueue q
   where
     match Task{ taskBuildConfig = BuildConfig{..}
               , taskTarget = Target packageName packageVersion
-              } = and (fromMaybe True <$> [ fmap (compiler ==)        mCompiler
-                                          , fmap (compilerRelease ==) mCompilerVersion
-                                          , fmap (packageName ==)     mPackageName
-                                          , fmap (packageVersion ==)  mPackageVersion
-                                          ])
+              } = and (fromMaybe True <$>
+                         [ fmap (buildConfigCompiler ==)        mCompiler
+                         , fmap (buildConfigCompilerRelease ==) mCompilerVersion
+                         , fmap (packageName ==)     mPackageName
+                         , fmap (packageVersion ==)  mPackageVersion
+                         ])
 
 singleTask :: TaskQueue -> Maybe Task
 singleTask (TaskQueue queue)
