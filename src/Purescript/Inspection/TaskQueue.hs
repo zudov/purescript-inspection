@@ -3,7 +3,6 @@
 {-# LANGUAGE RecordWildCards #-}
 module Purescript.Inspection.TaskQueue
   ( TaskQueue(..)
-  , emptyTaskQueue
   , addTask
   , selectTasks
   , singleTask
@@ -16,7 +15,6 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Typeable
-import Data.SafeCopy
 import GHC.Generics
 
 import Purescript.Inspection.Task
@@ -34,11 +32,6 @@ instance Monoid TaskQueue where
   mappend (TaskQueue a) (TaskQueue b) = TaskQueue (mappend a b)
 
 instance ToJSON TaskQueue
-
-deriveSafeCopy 0 'base ''TaskQueue
-
-emptyTaskQueue :: TaskQueue
-emptyTaskQueue = TaskQueue Set.empty
 
 addTask :: Task -> TaskQueue -> TaskQueue
 addTask task (TaskQueue queue) = TaskQueue $ Set.insert task queue

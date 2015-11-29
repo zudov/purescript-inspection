@@ -86,37 +86,22 @@ addBuildResult result packageName packageVersion compiler compilerVersion = do
 
 
 type QueueAPI =
-      QueryParam "compiler" Compiler
-      :> QueryParam "compilerVersion" ReleaseTag
-         :> QueryParam "packageName" PackageName
-            :> QueryParam "packageVersion" ReleaseTag
+  QueryParam "compiler" Compiler
+    :> QueryParam "compilerVersion" ReleaseTag
+       :> QueryParam "packageName" PackageName
+          :> QueryParam "packageVersion" ReleaseTag
+            :> QueryFlag "rebuild"
                :> Get '[JSON] TaskQueue
- :<|> QueryParam "compiler" Compiler
-      :> QueryParam "compilerVersion" ReleaseTag
-         :> QueryParam "packageName" PackageName
-            :> QueryParam "packageVersion" ReleaseTag
-              :> QueryFlag "rebuild"
-                 :> Post '[JSON] TaskQueue
 
 queueServer :: ServerT QueueAPI Inspector
 queueServer = getQueue
-         :<|> addToQueue
 
 getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
-         -> Inspector TaskQueue
-getQueue mCompiler mCompilerVersion mPackageName mPackageVersion = do
-  acid <- ask
-  tasks <- liftIO (query acid GetTaskQueue)
-  pure $ selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
-       $ tasks
-
-addToQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
-           -> Bool -> Inspector TaskQueue
-addToQueue mCompiler mCompilerVersion mPackageName mPackageVersion rebuild = do
+         -> Bool -> Inspector TaskQueue
+getQueue mCompiler mCompilerVersion mPackageName mPackageVersion rebuild = do
   acid <- ask
   matrix <- liftIO (query acid GetBuildMatrix)
   let newTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
                $ allYourTasks rebuild
                $ matrix
-  liftIO $ update acid (AppendTaskQueue newTasks)
   pure newTasks 
