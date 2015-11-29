@@ -1,26 +1,77 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RecordWildCards #-}
 module Purescript.Inspection.TaskQueue
-  ( TaskQueue()
+  ( TaskQueue(..)
   , emptyTaskQueue
   , addTask
+  , selectTasks
+  , singleTask
+  , allYourTasks
   ) where
 
-import Data.Bimap (Bimap)
-import qualified Data.Bimap as Bimap
+import Data.Aeson.Extra
+import Data.Set (Set)
+import qualified Data.Set as Set
+import qualified Data.Map as Map
 import Data.Maybe
-import Control.Arrow
+import Data.Typeable
+import Data.SafeCopy
+import GHC.Generics
 
 import Purescript.Inspection.Task
+import Purescript.Inspection.Target
+import Purescript.Inspection.BuildConfig
+import Purescript.Inspection.PackageName
+import Purescript.Inspection.ReleaseTag
+import Purescript.Inspection.BuildMatrix
 
-newtype TaskQueue = TaskQueue (Bimap TaskId Task)
+newtype TaskQueue = TaskQueue (Set Task)
+                  deriving (Show, Eq, Generic, Typeable)
+
+instance Monoid TaskQueue where
+  mempty = TaskQueue mempty
+  mappend (TaskQueue a) (TaskQueue b) = TaskQueue (mappend a b)
+
+instance ToJSON TaskQueue
+
+deriveSafeCopy 0 'base ''TaskQueue
 
 emptyTaskQueue :: TaskQueue
-emptyTaskQueue = TaskQueue Bimap.empty
+emptyTaskQueue = TaskQueue Set.empty
 
-addTask :: Task -> TaskQueue -> (TaskId, TaskQueue)
-addTask task (TaskQueue queue)
-  | Bimap.null queue = (TaskId 0, TaskQueue (Bimap.singleton (TaskId 0) task))
-addTask task (TaskQueue queue) =
-  (fromJust . Bimap.lookupR task &&& TaskQueue) queue'
+addTask :: Task -> TaskQueue -> TaskQueue
+addTask task (TaskQueue queue) = TaskQueue $ Set.insert task queue
+
+selectTasks :: Maybe Compiler
+            -> Maybe ReleaseTag
+            -> Maybe PackageName
+            -> Maybe ReleaseTag
+            -> TaskQueue -> TaskQueue
+selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion (TaskQueue queue) 
+  = TaskQueue $ Set.filter match queue
   where
-    TaskId maxId = fst $ Bimap.findMax queue
-    queue' = Bimap.tryInsert (TaskId (maxId + 1)) task queue
+    match Task{ taskBuildConfig = BuildConfig{..}
+              , taskTarget = Target packageName packageVersion
+              } = and (fromMaybe True <$> [ fmap (compiler ==)        mCompiler
+                                          , fmap (compilerRelease ==) mCompilerVersion
+                                          , fmap (packageName ==)     mPackageName
+                                          , fmap (packageVersion ==)  mPackageVersion
+                                          ])
+
+singleTask :: TaskQueue -> Maybe Task
+singleTask (TaskQueue queue)
+  | Set.null queue = Nothing
+  | otherwise = Just $ head $ Set.toList queue
+
+allYourTasks :: Bool -> BuildMatrix -> TaskQueue
+allYourTasks includeCompleted (BuildMatrix matrix) =
+  TaskQueue 
+    (Map.foldMapWithKey
+      (\packageName -> Map.foldMapWithKey
+        (\versionTag -> Map.foldMapWithKey
+          (\buildConfig results ->
+            if null results || includeCompleted
+            then Set.singleton (Task buildConfig (Target packageName versionTag))
+            else Set.empty)))
+      matrix)

@@ -1,26 +1,54 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies #-}
 module Purescript.Inspection.ReleaseTag
-  ( ReleaseTag()
+  ( ReleaseTag(..)
+  , GithubLocation(..)
+  , GithubOwner(..)
+  , GithubRepo(..)
   , getReleaseTags
   , getGithubLocation
   ) where
 
+import Data.Aeson.Extra
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Data.Map (Map)
 import Data.Typeable (Typeable())
+import Data.SafeCopy
 import Data.Data (Data())
 import Data.Monoid ((<>))
 import Data.Aeson.Lens
 import GHC.Generics (Generic())
 import Control.Lens
+import Servant.Common.Text
 import Network.Wreq
 
 import Web.Bower.PackageMeta (PackageName(), runPackageName)
 import Network.URI
 
 -- | Release tags as they appear in Github's releases
-newtype ReleaseTag = ReleaseTag Text deriving (Show, Eq, Ord, Generic, Typeable, Data)
+newtype ReleaseTag = ReleaseTag { runReleaseTag :: Text }
+                   deriving (Show, Eq, Ord, Generic, Typeable, Data)
+
+instance ToJSONKey ReleaseTag where
+  toJSONKey = runReleaseTag
+
+instance ToJSON a => ToJSON (Map ReleaseTag a) where
+  toJSON = toJSON . M
+
+instance ToText ReleaseTag where
+  toText = runReleaseTag
+
+instance FromText ReleaseTag where
+  fromText = Just . ReleaseTag
+
+deriveSafeCopy 0 'base ''ReleaseTag
+
+instance ToJSON ReleaseTag where
+  toJSON = toJSON . runReleaseTag 
 
 data GithubLocation = GithubLocation GithubOwner GithubRepo
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
