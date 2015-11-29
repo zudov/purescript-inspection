@@ -28,11 +28,11 @@ inspectorToEither acid = Nat (inspectorToEither' acid)
 
 type InspectorAPI =
        "matrix" :> BuildMatrixAPI
-  :<|> "queue"  :> QueueAPI
+  :<|> "tasks"  :> TasksAPI
 
 inspectorServer :: ServerT InspectorAPI Inspector
 inspectorServer = buildMatrixServer
-             :<|> queueServer
+             :<|> tasksServer
 
 type BuildMatrixAPI =
        Get '[JSON] BuildMatrix
@@ -85,7 +85,7 @@ addBuildResult result packageName packageVersion compiler compilerVersion = do
     Just results -> pure results
 
 
-type QueueAPI =
+type TasksAPI =
   QueryParam "compiler" Compiler
     :> QueryParam "compilerVersion" ReleaseTag
        :> QueryParam "packageName" PackageName
@@ -93,8 +93,8 @@ type QueueAPI =
             :> QueryFlag "rebuild"
                :> Get '[JSON] TaskQueue
 
-queueServer :: ServerT QueueAPI Inspector
-queueServer = getQueue
+tasksServer :: ServerT TasksAPI Inspector
+tasksServer = getQueue
 
 getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
          -> Bool -> Inspector TaskQueue
