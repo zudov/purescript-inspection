@@ -28,6 +28,7 @@ import Data.Argonaut.Parser
 import Halogen
 import Halogen.Util (appendToBody)
 import Halogen.HTML as H
+import Halogen.HTML.Properties as P
 import Halogen.HTML.Events as E
 import Halogen.HTML.Events.Forms as E
 
@@ -57,7 +58,7 @@ lookupPackageMatrix :: PackageName -> Packages -> Maybe Package.PackageMatrix
 lookupPackageMatrix n (Packages m) = StrMap.lookup n m
 
 packageNames :: Packages -> Array PackageName
-packageNames (Packages m) = StrMap.keys m
+packageNames (Packages m) = Array.sort $ StrMap.keys m
 
 instance decodeJsonPackages :: DecodeJson Packages where
   decodeJson = map Packages <<< decodeJson
@@ -90,12 +91,14 @@ ui = parentComponent render eval
     render state =
       H.div_
         [ H.select
-        [ E.onValueChange (E.input SelectPackage) ]
-            (H.option_ <<< Array.singleton <<< H.text <$> packageNames state.packages)
+            [ E.onValueChange (E.input SelectPackage) ]
+            (packageNames state.packages <#> \packageName ->
+              H.option [ P.selected (packageName == state.selectedPackage) ]
+                       [ H.text packageName ] )
         , H.slot (PackageSlot state.selectedPackage)
                  (\_ -> { component: Package.packageMatrix
                         , initialState:
-                            Package.State $ fromJust
+                            Package.State $ fromMaybe (Package.PackageMatrix mempty)
                                           $ lookupPackageMatrix state.selectedPackage
                                                                 state.packages
                         })
