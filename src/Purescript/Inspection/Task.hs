@@ -2,6 +2,7 @@
 module Purescript.Inspection.Task where
 
 import Data.Aeson.Extra
+import Data.Aeson.Types
 import Data.Typeable (Typeable())
 import Data.Data (Data())
 import Data.SafeCopy
@@ -17,6 +18,11 @@ data Task = Task { taskBuildConfig :: BuildConfig
                  }
           deriving (Show, Eq, Ord, Generic, Typeable)
 
-instance ToJSON Task
+instance ToJSON Task where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = modifier }
+    where
+      modifier "taskBuildConfig" = "buildConfig"
+      modifier "taskTarget" = "target"
+      modifier a = a
 
 deriveSafeCopy 0 'base ''Task
