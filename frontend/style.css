@@ -1,0 +1,20 @@
+
+table, td, th {
+  border: 1px solid black;
+  border-collapse: collapse;
+  text-align: center;
+  padding: 5px;
+  font-size: 0.8em;
+}
+
+.success {
+  background-color: green;
+}
+
+.failure {
+  background-color: red;
+}
+
+.missing {
+  background-color: grey;
+}
