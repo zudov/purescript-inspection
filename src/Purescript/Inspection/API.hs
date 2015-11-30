@@ -29,10 +29,21 @@ inspectorToEither acid = Nat (inspectorToEither' acid)
 type InspectorAPI =
        "matrix" :> BuildMatrixAPI
   :<|> "tasks"  :> TasksAPI
+  :<|> "sync" :> Post '[] ()
 
 inspectorServer :: ServerT InspectorAPI Inspector
 inspectorServer = buildMatrixServer
              :<|> tasksServer
+             :<|> syncMatrix
+
+syncMatrix :: Inspector ()
+syncMatrix = do
+  acid <- ask
+  matrix <- liftIO (query acid GetBuildMatrix)
+  populated <- liftIO (populatedBuildMatrix (packages matrix)
+                                            (compilers matrix))
+  liftIO (update acid (AppendBuildMatrix populated))
+  
 
 type BuildMatrixAPI =
        Get '[JSON] BuildMatrix
