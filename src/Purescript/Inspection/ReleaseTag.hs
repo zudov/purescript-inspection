@@ -16,6 +16,7 @@ import Data.Aeson.Extra
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Map (Map)
+import Data.Maybe
 import Data.Typeable (Typeable())
 import Data.SafeCopy
 import Data.Data (Data())
@@ -71,7 +72,7 @@ getGithubLocation (runPackageName -> packageName) = do
   [gitUrl] <- (^.. responseBody . key "url" . _String) <$> get url
   [_,GithubOwner -> owner, GithubRepo -> repo] <- either fail pure
     (Text.splitOn "/" <$>
-      (maybe (Left "Must end in .git") Right . Text.stripSuffix ".git"
+      ((\x -> Right (fromMaybe x (Text.stripSuffix ".git" x)))
          =<< maybe (Left "Cannot parse github url") (Right . Text.pack)
                    (uriPath <$> parseURI (Text.unpack gitUrl))))
   pure (GithubLocation owner repo)
