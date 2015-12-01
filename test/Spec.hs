@@ -1,4 +1,3 @@
-import Task
 
 main :: IO ()
 main = do
