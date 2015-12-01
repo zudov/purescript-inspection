@@ -17,22 +17,22 @@ import Purescript.Inspection.BuildMatrix
 
 main :: IO ()
 main = do
-  acid <- openLocalState initialDB
   config <- Config.getConfig "inspection.yaml"
   populated <- populatedBuildMatrix (Config.packages config)
                                     (Config.compilers config)
+  acid <- openLocalState initialDB
   update acid (AppendBuildMatrix populated)
 
-  run 8080 (app acid)
+  run 8080 (app (Environment acid))
 
   closeAcidState acid
 
-server :: AcidState DB -> Server InspectorAPI
-server acid = enter (inspectorToEither acid) inspectorServer
+server :: Environment -> Server InspectorAPI
+server env = enter (inspectorToEither env) inspectorServer
 
-app :: AcidState DB -> Application
-app acid = logStdoutDev $ cors (const (Just corsPolicy))
-                        $ serve (Proxy :: Proxy (InspectorAPI :<|> Raw))
-                                (server acid :<|> serveDirectory "frontend/dist/")
+app :: Environment -> Application
+app env = logStdoutDev $ cors (const (Just corsPolicy))
+                       $ serve (Proxy :: Proxy (InspectorAPI :<|> Raw))
+                               (server env :<|> serveDirectory "frontend/dist/")
   where
     corsPolicy = simpleCorsResourcePolicy

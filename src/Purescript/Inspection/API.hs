@@ -17,14 +17,18 @@ import Purescript.Inspection.BuildResult
 import Purescript.Inspection.PackageName
 import Purescript.Inspection.TaskQueue
 
-type Inspector = ReaderT (AcidState DB) (EitherT ServantErr IO)
+data Environment
+  = Environment { envAcid :: AcidState DB
+                }
 
-inspectorToEither' :: AcidState DB -> Inspector a
+type Inspector = ReaderT Environment (EitherT ServantErr IO)
+
+inspectorToEither' :: Environment -> Inspector a
                    -> EitherT ServantErr IO a
-inspectorToEither' acid r = runReaderT r acid
+inspectorToEither' env r = runReaderT r env
 
-inspectorToEither :: AcidState DB -> Inspector :~> EitherT ServantErr IO
-inspectorToEither acid = Nat (inspectorToEither' acid)
+inspectorToEither :: Environment -> Inspector :~> EitherT ServantErr IO
+inspectorToEither env = Nat (inspectorToEither' env)
 
 type InspectorAPI =
        "matrix" :> BuildMatrixAPI
@@ -38,7 +42,7 @@ inspectorServer = buildMatrixServer
 
 syncMatrix :: Inspector ()
 syncMatrix = do
-  acid <- ask
+  acid <- asks envAcid
   matrix <- liftIO (query acid GetBuildMatrix)
   populated <- liftIO (populatedBuildMatrix (packages matrix)
                                             (compilers matrix))
@@ -70,14 +74,14 @@ buildMatrixServer = getBuildMatrix
 
 getBuildMatrix :: Inspector BuildMatrix
 getBuildMatrix = do
-  acid <- ask
+  acid <- asks envAcid
   liftIO (query acid GetBuildMatrix)
 
 getPackageReleases :: PackageName -> Inspector (Map ReleaseTag
                                                   (Map BuildConfig
                                                      [BuildResult]))
 getPackageReleases packageName = do
-  acid <- ask
+  acid <- asks envAcid
   BuildMatrix matrix <- liftIO (query acid GetBuildMatrix)
   case Map.lookup packageName matrix of
     Just a  -> pure a
@@ -87,7 +91,7 @@ addBuildResult :: BuildResult
                -> PackageName -> ReleaseTag -> Compiler -> ReleaseTag
                -> Inspector [BuildResult]
 addBuildResult result packageName packageVersion compiler compilerVersion = do
-  acid <- ask
+  acid <- asks envAcid
   mResults <- liftIO (update acid (AddBuildResult packageName packageVersion
                                                   (BuildConfig compiler compilerVersion)
                                                   result))
@@ -110,7 +114,7 @@ tasksServer = getQueue
 getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
          -> Bool -> Inspector TaskQueue
 getQueue mCompiler mCompilerVersion mPackageName mPackageVersion rebuild = do
-  acid <- ask
+  acid <- asks envAcid
   matrix <- liftIO (query acid GetBuildMatrix)
   let newTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
                $ allYourTasks rebuild

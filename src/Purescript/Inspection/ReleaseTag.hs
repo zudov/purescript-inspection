@@ -58,18 +58,19 @@ newtype GithubOwner = GithubOwner Text
 newtype GithubRepo = GithubRepo Text
                    deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
-getReleaseTags :: GithubLocation -> IO [ReleaseTag]
-getReleaseTags (GithubLocation (GithubOwner owner) (GithubRepo repo)) = do
-  response <- get url
+getReleaseTags :: Options -> GithubLocation -> IO [ReleaseTag]
+getReleaseTags opts (GithubLocation (GithubOwner owner) (GithubRepo repo)) = do
+  response <- getWith opts url
   pure (ReleaseTag <$> (response ^.. responseBody . values . key "tag_name" . _String))
   where
     url = "https://api.github.com/repos/"
             <> escapeURIString isUnreserved (Text.unpack owner) <> "/"
             <> escapeURIString isUnreserved (Text.unpack repo) <> "/releases"
 
-getGithubLocation :: PackageName -> IO GithubLocation
-getGithubLocation (runPackageName -> packageName) = do
-  [gitUrl] <- (^.. responseBody . key "url" . _String) <$> get url
+getGithubLocation :: Options -> PackageName -> IO GithubLocation
+getGithubLocation opts (runPackageName -> packageName) = do
+  [gitUrl] <- (^.. responseBody . key "url" . _String) <$> getWith opts url
+  putStrLn $ show gitUrl
   [_,GithubOwner -> owner, GithubRepo -> repo] <- either fail pure
     (Text.splitOn "/" <$>
       ((\x -> Right (fromMaybe x (Text.stripSuffix ".git" x)))

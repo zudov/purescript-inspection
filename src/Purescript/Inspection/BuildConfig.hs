@@ -17,6 +17,8 @@ import qualified Data.Text as Text
 import GHC.Generics (Generic())
 import Servant.Common.Text
 
+import qualified Network.Wreq as Wreq
+
 import Purescript.Inspection.ReleaseTag
 
 data BuildConfig
@@ -72,5 +74,5 @@ instance ToJSON Compiler where
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (GithubRepo "purescript")
 
-getBuildConfigs :: Compiler -> IO [BuildConfig]
-getBuildConfigs c = map (BuildConfig c) <$> getReleaseTags (compilerRepo c)
+getBuildConfigs :: Wreq.Options -> Compiler -> IO [BuildConfig]
+getBuildConfigs opts c = map (BuildConfig c) <$> getReleaseTags opts (compilerRepo c)

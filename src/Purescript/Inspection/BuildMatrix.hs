@@ -10,6 +10,8 @@ import Data.SafeCopy
 import Data.Typeable
 import GHC.Generics
 
+import Network.Wreq (withManager)
+
 import Purescript.Inspection.ReleaseTag
 import Purescript.Inspection.PackageName
 import Purescript.Inspection.BuildResult
@@ -40,14 +42,14 @@ compilers (BuildMatrix matrix) =
   foldMap (foldMap (map buildConfigCompiler . Map.keys)) matrix
 
 populatedBuildMatrix :: [PackageName] -> [Compiler] -> IO BuildMatrix
-populatedBuildMatrix packages compilers = do
-  buildConfigs <- concat <$> mapM getBuildConfigs compilers
-  let buildConfigsMap = Map.fromList (zip (take 10 buildConfigs)
+populatedBuildMatrix packages compilers = withManager $ \opts -> do
+  buildConfigs <- concat <$> mapM (getBuildConfigs opts) compilers
+  let buildConfigsMap = Map.fromList (zip (take 5 buildConfigs)
                                           (repeat []))
   BuildMatrix . Map.fromList <$>
     (forM packages $ \package -> do
-       releaseTags <- getReleaseTags =<< getGithubLocation package
-       pure (package, Map.fromList (zip (take 10 releaseTags)
+       releaseTags <- getReleaseTags opts =<< getGithubLocation opts package
+       pure (package, Map.fromList (zip (take 4 releaseTags)
                                         (repeat buildConfigsMap))))
 
 addReleaseTag :: PackageName -> ReleaseTag -> BuildMatrix -> BuildMatrix
