@@ -56,7 +56,7 @@ themselves, but it's easy to automate it using on-release travis builds.
    ~ $ tar -xvf purescript.tar.gz
 
    ~ $ # Get the package and it's dependencies using bower
-   ~ $ bower install --save purescript-validation#v0.2.1
+   ~ $ bower install purescript-validation#v0.2.1
 
    ~ $ # Compile the package
    ~ $ ./purescript/psc 'bower_components/purescript-*/src/**/*.purs' -f 'bower_components/purescript-*/src/**/*.js'
@@ -122,7 +122,7 @@ themselves, but it's easy to automate it using on-release travis builds.
    ~ $ tar -xvf purescript.tar.gz
 
    ~ $ # Get the package and it's dependencies using bower
-   ~ $ bower install --save purescript-foobar#v9.9.9
+   ~ $ bower install purescript-foobar#v9.9.9
 
    ~ $ # Compile the package
    ~ $ ./purescript/psc 'bower_components/purescript-*/src/**/*.purs' -f 'bower_components/purescript-*/src/**/*.js'
