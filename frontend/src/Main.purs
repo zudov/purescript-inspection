@@ -39,7 +39,7 @@ import Network.HTTP.Affjax.Response (Respondable, ResponseType(..))
 import Package as Package
 
 main = runAff throwException (const (pure unit)) $ do
-  x <- Affjax.get "http://localhost:8080/matrix"
+  x <- Affjax.get "http://inspector.zudov.me/matrix"
   liftEff $ logAny x
   liftEff $ logAny $ jsonParser x.response
   let ePackages = decodeJson =<< jsonParser x.response
