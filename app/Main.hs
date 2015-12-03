@@ -13,6 +13,7 @@ import Network.Wai.Middleware.Cors
 import Purescript.Inspection.Database
 import qualified Purescript.Inspection.Config   as Config
 import Purescript.Inspection.API
+import Purescript.Inspection.API.Types
 import Purescript.Inspection.BuildMatrix
 
 main :: IO ()

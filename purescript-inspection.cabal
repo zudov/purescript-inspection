@@ -15,6 +15,9 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Purescript.Inspection.API
+                       Purescript.Inspection.API.Types
+                       Purescript.Inspection.API.BuildMatrix
+                       Purescript.Inspection.API.Tasks
                        Purescript.Inspection.BuildConfig
                        Purescript.Inspection.BuildMatrix
                        Purescript.Inspection.BuildResult
