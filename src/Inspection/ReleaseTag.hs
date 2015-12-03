@@ -12,8 +12,9 @@ module Inspection.ReleaseTag
   , getGithubLocation
   ) where
 
-import           Control.Lens  ((^..))
+import           Control.Lens  ((.~), (^..))
 import           Data.Data     (Data ())
+import           Data.Function ((&))
 import           Data.Map      (Map)
 import           Data.Maybe    (fromMaybe)
 import           Data.Monoid   ((<>))
@@ -25,6 +26,7 @@ import           GHC.Generics  (Generic ())
 import           Data.Aeson.Extra
 import           Data.Aeson.Lens       (key, values, _String)
 import           Data.SafeCopy         (base, deriveSafeCopy)
+import           Network.HTTP.Client   (Manager)
 import           Network.URI           (escapeURIString, isUnreserved, parseURI,
                                         uriPath)
 import qualified Network.Wreq          as Wreq
@@ -59,17 +61,18 @@ newtype GithubOwner = GithubOwner Text
 newtype GithubRepo = GithubRepo Text
                    deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
-getReleaseTags :: Wreq.Options -> GithubLocation -> IO [ReleaseTag]
-getReleaseTags opts (GithubLocation (GithubOwner owner) (GithubRepo repo)) = do
+getReleaseTags :: Manager -> GithubLocation -> IO [ReleaseTag]
+getReleaseTags manager (GithubLocation (GithubOwner owner) (GithubRepo repo)) = do
   response <- Wreq.getWith opts url
   pure (ReleaseTag <$> (response ^.. Wreq.responseBody . values . key "tag_name" . _String))
   where
     url = "https://api.github.com/repos/"
             <> escapeURIString isUnreserved (Text.unpack owner) <> "/"
             <> escapeURIString isUnreserved (Text.unpack repo) <> "/releases"
+    opts = Wreq.defaults & Wreq.manager .~ Right manager
 
-getGithubLocation :: Wreq.Options -> PackageName -> IO GithubLocation
-getGithubLocation opts (runPackageName -> packageName) = do
+getGithubLocation :: Manager -> PackageName -> IO GithubLocation
+getGithubLocation manager (runPackageName -> packageName) = do
   [gitUrl] <- (^.. Wreq.responseBody . key "url" . _String) <$> Wreq.getWith opts url
   putStrLn $ show gitUrl
   [_,GithubOwner -> owner, GithubRepo -> repo] <- either fail pure
@@ -80,3 +83,4 @@ getGithubLocation opts (runPackageName -> packageName) = do
   pure (GithubLocation owner repo)
   where
     url = "https://bower.herokuapp.com/packages/" <> escapeURIString isUnreserved packageName
+    opts = Wreq.defaults & Wreq.manager .~ Right manager

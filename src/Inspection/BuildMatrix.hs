@@ -9,8 +9,9 @@ import           Data.Typeable (Typeable)
 import           GHC.Generics  (Generic)
 
 import Data.Aeson.Extra
-import Data.SafeCopy    (base, deriveSafeCopy)
-import Network.Wreq     (withManager)
+import Data.SafeCopy           (base, deriveSafeCopy)
+import Network.HTTP.Client     (newManager)
+import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Inspection.BuildConfig
 import Inspection.BuildResult
@@ -42,13 +43,14 @@ compilers (BuildMatrix matrix) =
   foldMap (foldMap (map buildConfigCompiler . Map.keys)) matrix
 
 populatedBuildMatrix :: [PackageName] -> [Compiler] -> IO BuildMatrix
-populatedBuildMatrix packages compilers = withManager $ \opts -> do
-  buildConfigs <- concat <$> mapM (getBuildConfigs opts) compilers
+populatedBuildMatrix packages compilers = do
+  manager <- newManager tlsManagerSettings
+  buildConfigs <- concat <$> mapM (getBuildConfigs manager) compilers
   let buildConfigsMap = Map.fromList (zip (take 5 buildConfigs)
                                           (repeat []))
   BuildMatrix . Map.fromList <$>
     (forM packages $ \package -> do
-       releaseTags <- getReleaseTags opts =<< getGithubLocation opts package
+       releaseTags <- getReleaseTags manager =<< getGithubLocation manager package
        pure (package, Map.fromList (zip (take 4 releaseTags)
                                         (repeat buildConfigsMap))))
 

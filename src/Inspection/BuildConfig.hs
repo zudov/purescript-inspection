@@ -16,6 +16,7 @@ import           GHC.Generics  (Generic ())
 import           Data.Aeson.Extra
 import           Data.Aeson.Types    (Options (..), defaultOptions)
 import           Data.SafeCopy       (base, deriveSafeCopy)
+import           Network.HTTP.Client (Manager)
 import qualified Network.Wreq        as Wreq
 import           Servant.Common.Text (FromText (..), ToText (..))
 
@@ -74,5 +75,6 @@ instance ToJSON Compiler where
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (GithubRepo "purescript")
 
-getBuildConfigs :: Wreq.Options -> Compiler -> IO [BuildConfig]
-getBuildConfigs opts c = map (BuildConfig c) <$> getReleaseTags opts (compilerRepo c)
+getBuildConfigs :: Manager -> Compiler -> IO [BuildConfig]
+getBuildConfigs manager c =
+  map (BuildConfig c) <$> getReleaseTags manager (compilerRepo c)

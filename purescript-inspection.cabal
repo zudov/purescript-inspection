@@ -45,6 +45,8 @@ library
                      , transformers
                      , network-uri
                      , wreq
+                     , http-client
+                     , http-client-tls
                      , lens
                      , lens-aeson
                      , aeson-extra
