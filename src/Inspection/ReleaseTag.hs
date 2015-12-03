@@ -3,7 +3,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
-module Purescript.Inspection.ReleaseTag
+module Inspection.ReleaseTag
   ( ReleaseTag(..)
   , GithubLocation(..)
   , GithubOwner(..)

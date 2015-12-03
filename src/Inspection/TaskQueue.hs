@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
-module Purescript.Inspection.TaskQueue
+module Inspection.TaskQueue
   ( TaskQueue(..)
   , addTask
   , selectTasks
@@ -17,12 +17,12 @@ import Data.Maybe
 import Data.Typeable
 import GHC.Generics
 
-import Purescript.Inspection.Task
-import Purescript.Inspection.Target
-import Purescript.Inspection.BuildConfig
-import Purescript.Inspection.PackageName
-import Purescript.Inspection.ReleaseTag
-import Purescript.Inspection.BuildMatrix
+import Inspection.Task
+import Inspection.Target
+import Inspection.BuildConfig
+import Inspection.PackageName
+import Inspection.ReleaseTag
+import Inspection.BuildMatrix
 
 newtype TaskQueue = TaskQueue (Set Task)
                   deriving (Show, Eq, Generic, Typeable)

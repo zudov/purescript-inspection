@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
-module Purescript.Inspection.API where
+module Inspection.API where
 
 import Servant
 
-import Purescript.Inspection.API.Types
-import Purescript.Inspection.API.BuildMatrix
-import Purescript.Inspection.API.Tasks
+import Inspection.API.Types
+import Inspection.API.BuildMatrix
+import Inspection.API.Tasks
 
 type InspectorAPI =
        "matrix" :> BuildMatrixAPI

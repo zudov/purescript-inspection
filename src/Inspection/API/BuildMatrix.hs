@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
-module Purescript.Inspection.API.BuildMatrix
+module Inspection.API.BuildMatrix
   ( BuildMatrixAPI
   , buildMatrixServer
   ) where
@@ -13,14 +13,14 @@ import Data.Acid
 
 import Servant
 
-import Purescript.Inspection.ReleaseTag
-import Purescript.Inspection.BuildConfig
-import Purescript.Inspection.BuildResult
-import Purescript.Inspection.BuildMatrix
-import Purescript.Inspection.Database
-import Purescript.Inspection.PackageName
+import Inspection.ReleaseTag
+import Inspection.BuildConfig
+import Inspection.BuildResult
+import Inspection.BuildMatrix
+import Inspection.Database
+import Inspection.PackageName
 
-import Purescript.Inspection.API.Types
+import Inspection.API.Types
 
 type BuildMatrixAPI =
        Get '[JSON] BuildMatrix

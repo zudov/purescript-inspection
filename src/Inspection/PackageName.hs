@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Purescript.Inspection.PackageName
+module Inspection.PackageName
   (PackageName) where
 
 import Data.Aeson.Extra

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Purescript.Inspection.BuildResult where
+module Inspection.BuildResult where
 
 import Data.Aeson.Extra
 import Data.Typeable (Typeable())

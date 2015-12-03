@@ -14,21 +14,21 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Purescript.Inspection.API
-                       Purescript.Inspection.API.Types
-                       Purescript.Inspection.API.BuildMatrix
-                       Purescript.Inspection.API.Tasks
-                       Purescript.Inspection.BuildConfig
-                       Purescript.Inspection.BuildMatrix
-                       Purescript.Inspection.BuildResult
-                       Purescript.Inspection.Config
-                       Purescript.Inspection.Database
-                       Purescript.Inspection.PackageName
-                       Purescript.Inspection.ReleaseTag
-                       Purescript.Inspection.Target
-                       Purescript.Inspection.Task
-                       Purescript.Inspection.TaskQueue
-                       Purescript.Inspection.AuthToken
+  exposed-modules:     Inspection.API
+                       Inspection.API.Types
+                       Inspection.API.BuildMatrix
+                       Inspection.API.Tasks
+                       Inspection.BuildConfig
+                       Inspection.BuildMatrix
+                       Inspection.BuildResult
+                       Inspection.Config
+                       Inspection.Database
+                       Inspection.PackageName
+                       Inspection.ReleaseTag
+                       Inspection.Target
+                       Inspection.Task
+                       Inspection.TaskQueue
+                       Inspection.AuthToken
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , bower-json

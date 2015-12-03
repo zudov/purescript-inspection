@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Purescript.Inspection.BuildMatrix where
+module Inspection.BuildMatrix where
 
 import Control.Monad
 import Data.Aeson.Extra
@@ -12,10 +12,10 @@ import GHC.Generics
 
 import Network.Wreq (withManager)
 
-import Purescript.Inspection.ReleaseTag
-import Purescript.Inspection.PackageName
-import Purescript.Inspection.BuildResult
-import Purescript.Inspection.BuildConfig
+import Inspection.ReleaseTag
+import Inspection.PackageName
+import Inspection.BuildResult
+import Inspection.BuildConfig
 
 data BuildMatrix
   = BuildMatrix (Map PackageName -- ^ Packages

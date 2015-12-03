@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
-module Purescript.Inspection.API.Types
+module Inspection.API.Types
   ( Environment(..)
   , Inspector
   , inspectorToEither
@@ -12,7 +12,7 @@ import Data.Acid (AcidState())
 
 import Servant ((:~>), runReaderTNat, ServantErr)
 
-import Purescript.Inspection.Database (DB())
+import Inspection.Database (DB())
 
 data Environment
   = Environment { envAcid :: AcidState DB

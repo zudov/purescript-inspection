@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
-module Purescript.Inspection.API.Tasks
+module Inspection.API.Tasks
   ( TasksAPI
   , tasksServer
   ) where
@@ -11,13 +11,13 @@ import Data.Acid
 
 import Servant
 
-import Purescript.Inspection.TaskQueue
-import Purescript.Inspection.ReleaseTag
-import Purescript.Inspection.Database
-import Purescript.Inspection.BuildConfig
-import Purescript.Inspection.PackageName
+import Inspection.TaskQueue
+import Inspection.ReleaseTag
+import Inspection.Database
+import Inspection.BuildConfig
+import Inspection.PackageName
 
-import Purescript.Inspection.API.Types
+import Inspection.API.Types
 
 type TasksAPI =
   QueryParam "compiler" Compiler

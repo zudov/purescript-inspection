@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Purescript.Inspection.AuthToken
+module Inspection.AuthToken
   ( AuthToken()
   , runAuthToken
   ) where

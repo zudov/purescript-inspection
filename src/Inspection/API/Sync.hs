@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
-module Purescript.Inspection.API.Sync 
+module Inspection.API.Sync 
   ( SyncAPI
   , syncAPI
   ) where
@@ -15,16 +15,16 @@ import qualified Data.Text.Encoding as Text
 import Servant
 import Network.Wreq
 
-import Purescript.Inspection.AuthToken
-import Purescript.Inspection.Database
-import Purescript.Inspection.BuildMatrix
-import Purescript.Inspection.ReleaseTag
-import Purescript.Inspection.BuildConfig
-import Purescript.Inspection.BuildResult
-import Purescript.Inspection.PackageName
-import Purescript.Inspection.TaskQueue
+import Inspection.AuthToken
+import Inspection.Database
+import Inspection.BuildMatrix
+import Inspection.ReleaseTag
+import Inspection.BuildConfig
+import Inspection.BuildResult
+import Inspection.PackageName
+import Inspection.TaskQueue
 
-import Purescript.Inspection.API.Types
+import Inspection.API.Types
 
 type SyncAPI =
   Header "Authorization" AuthToken :> Get '[JSON] Value

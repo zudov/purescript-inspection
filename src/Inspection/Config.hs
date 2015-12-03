@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Purescript.Inspection.Config where
+module Inspection.Config where
 
 import Data.Aeson.TH
 import Data.Yaml
 
 import Web.Bower.PackageMeta
 
-import Purescript.Inspection.BuildConfig
+import Inspection.BuildConfig
 
 data Config
   = Config { compilers :: [Compiler]

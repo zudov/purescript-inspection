@@ -3,7 +3,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Purescript.Inspection.BuildConfig where
+module Inspection.BuildConfig where
 
 import Control.Monad
 import Data.Aeson.Extra
@@ -19,7 +19,7 @@ import Servant.Common.Text
 
 import qualified Network.Wreq as Wreq
 
-import Purescript.Inspection.ReleaseTag
+import Inspection.ReleaseTag
 
 data BuildConfig
   = BuildConfig { buildConfigCompiler        :: Compiler

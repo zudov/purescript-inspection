@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Purescript.Inspection.Task where
+module Inspection.Task where
 
 import Data.Aeson.Extra
 import Data.Aeson.Types
@@ -8,8 +8,8 @@ import Data.Data (Data())
 import Data.SafeCopy
 import GHC.Generics (Generic())
 
-import Purescript.Inspection.BuildConfig
-import Purescript.Inspection.Target
+import Inspection.BuildConfig
+import Inspection.Target
 
 newtype TaskId = TaskId Int deriving (Show, Eq, Ord, Generic, Typeable, Data)
 

@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Purescript.Inspection.Database
+module Inspection.Database
   ( DB(..)
   , initialDB
   , GetBuildMatrix(..)
@@ -17,11 +17,11 @@ import Data.Monoid
 import qualified Data.Map as Map
 import GHC.Generics
 
-import Purescript.Inspection.BuildMatrix
-import Purescript.Inspection.BuildResult
-import Purescript.Inspection.ReleaseTag
-import Purescript.Inspection.PackageName
-import Purescript.Inspection.BuildConfig
+import Inspection.BuildMatrix
+import Inspection.BuildResult
+import Inspection.ReleaseTag
+import Inspection.PackageName
+import Inspection.BuildConfig
 
 data DB = DB { buildMatrix :: BuildMatrix
              } deriving (Show, Eq, Generic, Typeable)

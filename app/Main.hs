@@ -10,11 +10,11 @@ import Network.Wai.Handler.Warp
 import Network.Wai.Middleware.RequestLogger
 import Network.Wai.Middleware.Cors
 
-import Purescript.Inspection.Database
-import qualified Purescript.Inspection.Config   as Config
-import Purescript.Inspection.API
-import Purescript.Inspection.API.Types
-import Purescript.Inspection.BuildMatrix
+import Inspection.Database
+import qualified Inspection.Config   as Config
+import Inspection.API
+import Inspection.API.Types
+import Inspection.BuildMatrix
 
 main :: IO ()
 main = do
