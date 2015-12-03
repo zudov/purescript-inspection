@@ -5,10 +5,9 @@ module Inspection.API.Tasks
   , tasksServer
   ) where
 
-import Control.Monad.Reader
-import Control.Monad.Trans.Either
-import Data.Acid
+import Control.Monad.Reader (asks, liftIO)
 
+import Data.Acid (query)
 import Servant
 
 import Inspection.TaskQueue
@@ -16,7 +15,6 @@ import Inspection.ReleaseTag
 import Inspection.Database
 import Inspection.BuildConfig
 import Inspection.PackageName
-
 import Inspection.API.Types
 
 type TasksAPI =

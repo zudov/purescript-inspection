@@ -1,26 +1,25 @@
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
 module Inspection.API.BuildMatrix
   ( BuildMatrixAPI
   , buildMatrixServer
   ) where
 
-import Control.Monad.Reader
-import Control.Monad.Trans.Either
-import Data.Map (Map())
-import qualified Data.Map as Map
-import Data.Acid
+import           Control.Monad.Reader (asks, lift, liftIO)
+import           Control.Monad.Trans.Either
+import           Data.Map                   (Map ())
+import qualified Data.Map                   as Map
 
+import Data.Acid (query, update)
 import Servant
 
-import Inspection.ReleaseTag
+import Inspection.API.Types
 import Inspection.BuildConfig
-import Inspection.BuildResult
 import Inspection.BuildMatrix
+import Inspection.BuildResult
 import Inspection.Database
 import Inspection.PackageName
-
-import Inspection.API.Types
+import Inspection.ReleaseTag
 
 type BuildMatrixAPI =
        Get '[JSON] BuildMatrix

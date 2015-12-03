@@ -1,0 +1,17 @@
+steps:
+  - imports:
+      align: group
+
+  - language_pragmas:
+      style: vertical
+
+  - records: {}
+
+  - trailing_whitespace: {}
+
+columns: 80
+
+language_extensions:
+  - DeriveGeneric
+  - DeriveDataTypeable
+  - PartialTypeSignatures

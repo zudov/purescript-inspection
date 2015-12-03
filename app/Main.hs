@@ -1,20 +1,20 @@
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
 module Main where
 
-import Data.Acid
+import Data.Acid                            (closeAcidState, openLocalState,
+                                             update)
+import Network.Wai                          (Application)
+import Network.Wai.Handler.Warp             (run)
+import Network.Wai.Middleware.Cors          (cors, simpleCorsResourcePolicy)
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Servant
-import Servant.Utils.StaticFiles
-import Network.Wai
-import Network.Wai.Handler.Warp
-import Network.Wai.Middleware.RequestLogger
-import Network.Wai.Middleware.Cors
 
-import Inspection.Database
-import qualified Inspection.Config   as Config
-import Inspection.API
-import Inspection.API.Types
-import Inspection.BuildMatrix
+import           Inspection.API
+import           Inspection.API.Types
+import           Inspection.BuildMatrix
+import qualified Inspection.Config      as Config
+import           Inspection.Database
 
 main :: IO ()
 main = do

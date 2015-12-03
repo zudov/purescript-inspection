@@ -4,8 +4,9 @@ module Inspection.AuthToken
   , runAuthToken
   ) where
 
-import Data.Text (Text())
+import           Data.Text (Text ())
 import qualified Data.Text as Text
+
 import Servant.Common.Text
 
 newtype AuthToken = AuthToken { runAuthToken :: Text } deriving (Show, Eq)

@@ -1,20 +1,20 @@
-{-# LANGUAGE TemplateHaskell #-}
 module Inspection.Config where
 
-import Data.Aeson.TH
-import Data.Yaml
+import GHC.Generics (Generic())
 
-import Web.Bower.PackageMeta
+import Data.Aeson.Extra
+import Data.Yaml (decodeFileEither)
 
+import Inspection.PackageName
 import Inspection.BuildConfig
 
 data Config
   = Config { compilers :: [Compiler]
            , packages :: [PackageName]
            }
-  deriving (Show)
+  deriving (Show, Generic)
 
 getConfig :: FilePath -> IO Config
 getConfig fp = either (fail . show) pure =<< decodeFileEither fp
            
-$(deriveFromJSON defaultOptions ''Config)
+instance FromJSON Config

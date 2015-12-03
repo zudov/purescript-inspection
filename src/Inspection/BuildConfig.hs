@@ -1,23 +1,23 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE ViewPatterns      #-}
 module Inspection.BuildConfig where
 
-import Control.Monad
-import Data.Aeson.Extra
-import Data.Aeson.Types
-import Data.Monoid
-import Data.Typeable (Typeable())
-import Data.Data (Data())
-import Data.Map (Map)
-import Data.SafeCopy
-import qualified Data.Text as Text
-import GHC.Generics (Generic())
-import Servant.Common.Text
+import           Control.Monad
+import           Data.Data     (Data ())
+import           Data.Map      (Map)
+import           Data.Monoid
+import qualified Data.Text     as Text
+import           Data.Typeable (Typeable ())
+import           GHC.Generics  (Generic ())
 
-import qualified Network.Wreq as Wreq
+import           Data.Aeson.Extra
+import           Data.Aeson.Types    (Options (..), defaultOptions)
+import           Data.SafeCopy       (base, deriveSafeCopy)
+import qualified Network.Wreq        as Wreq
+import           Servant.Common.Text (FromText (..), ToText (..))
 
 import Inspection.ReleaseTag
 

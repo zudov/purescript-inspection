@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE ViewPatterns      #-}
 module Inspection.ReleaseTag
   ( ReleaseTag(..)
   , GithubLocation(..)
@@ -12,23 +12,24 @@ module Inspection.ReleaseTag
   , getGithubLocation
   ) where
 
-import Data.Aeson.Extra
-import Data.Text (Text)
-import qualified Data.Text as Text
-import Data.Map (Map)
-import Data.Maybe
-import Data.Typeable (Typeable())
-import Data.SafeCopy
-import Data.Data (Data())
-import Data.Monoid ((<>))
-import Data.Aeson.Lens
-import GHC.Generics (Generic())
-import Control.Lens
-import Servant.Common.Text
-import Network.Wreq
+import           Control.Lens  ((^..))
+import           Data.Data     (Data ())
+import           Data.Map      (Map)
+import           Data.Maybe    (fromMaybe)
+import           Data.Monoid   ((<>))
+import           Data.Text     (Text)
+import qualified Data.Text     as Text
+import           Data.Typeable (Typeable ())
+import           GHC.Generics  (Generic ())
 
-import Web.Bower.PackageMeta (PackageName(), runPackageName)
-import Network.URI
+import           Data.Aeson.Extra
+import           Data.Aeson.Lens       (key, values, _String)
+import           Data.SafeCopy         (base, deriveSafeCopy)
+import           Network.URI           (escapeURIString, isUnreserved, parseURI,
+                                        uriPath)
+import qualified Network.Wreq          as Wreq
+import           Servant.Common.Text   (FromText (..), ToText (..))
+import           Web.Bower.PackageMeta (PackageName (), runPackageName)
 
 -- | Release tags as they appear in Github's releases
 newtype ReleaseTag = ReleaseTag { runReleaseTag :: Text }
@@ -49,7 +50,7 @@ instance FromText ReleaseTag where
 deriveSafeCopy 0 'base ''ReleaseTag
 
 instance ToJSON ReleaseTag where
-  toJSON = toJSON . runReleaseTag 
+  toJSON = toJSON . runReleaseTag
 
 data GithubLocation = GithubLocation GithubOwner GithubRepo
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
@@ -58,18 +59,18 @@ newtype GithubOwner = GithubOwner Text
 newtype GithubRepo = GithubRepo Text
                    deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
-getReleaseTags :: Options -> GithubLocation -> IO [ReleaseTag]
+getReleaseTags :: Wreq.Options -> GithubLocation -> IO [ReleaseTag]
 getReleaseTags opts (GithubLocation (GithubOwner owner) (GithubRepo repo)) = do
-  response <- getWith opts url
-  pure (ReleaseTag <$> (response ^.. responseBody . values . key "tag_name" . _String))
+  response <- Wreq.getWith opts url
+  pure (ReleaseTag <$> (response ^.. Wreq.responseBody . values . key "tag_name" . _String))
   where
     url = "https://api.github.com/repos/"
             <> escapeURIString isUnreserved (Text.unpack owner) <> "/"
             <> escapeURIString isUnreserved (Text.unpack repo) <> "/releases"
 
-getGithubLocation :: Options -> PackageName -> IO GithubLocation
+getGithubLocation :: Wreq.Options -> PackageName -> IO GithubLocation
 getGithubLocation opts (runPackageName -> packageName) = do
-  [gitUrl] <- (^.. responseBody . key "url" . _String) <$> getWith opts url
+  [gitUrl] <- (^.. Wreq.responseBody . key "url" . _String) <$> Wreq.getWith opts url
   putStrLn $ show gitUrl
   [_,GithubOwner -> owner, GithubRepo -> repo] <- either fail pure
     (Text.splitOn "/" <$>

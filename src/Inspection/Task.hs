@@ -1,12 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Inspection.Task where
 
-import Data.Aeson.Extra
-import Data.Aeson.Types
-import Data.Typeable (Typeable())
-import Data.Data (Data())
-import Data.SafeCopy
-import GHC.Generics (Generic())
+import Data.Data     (Data ())
+import Data.Typeable (Typeable ())
+import GHC.Generics  (Generic ())
+
+import Data.Aeson.Extra (ToJSON (..), genericToJSON)
+import Data.Aeson.Types (Options (..), defaultOptions)
+import Data.SafeCopy    (base, deriveSafeCopy)
 
 import Inspection.BuildConfig
 import Inspection.Target

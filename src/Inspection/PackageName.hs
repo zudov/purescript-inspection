@@ -3,14 +3,14 @@
 module Inspection.PackageName
   (PackageName) where
 
-import Data.Aeson.Extra
 import Data.Map (Map)
-import Data.SafeCopy
 import qualified Data.Text as Text
 
-import Servant.Common.Text
+import Data.Aeson.Extra
+import Data.SafeCopy (deriveSafeCopy, base)
+import Servant.Common.Text (FromText(..))
 
-import Web.Bower.PackageMeta
+import Web.Bower.PackageMeta (PackageName, runPackageName, mkPackageName)
 
 deriveSafeCopy 0 'base ''PackageName
 

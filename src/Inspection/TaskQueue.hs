@@ -1,6 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Inspection.TaskQueue
   ( TaskQueue(..)
   , addTask
@@ -9,20 +8,21 @@ module Inspection.TaskQueue
   , allYourTasks
   ) where
 
-import Data.Aeson.Extra
-import Data.Set (Set)
-import qualified Data.Set as Set
-import qualified Data.Map as Map
-import Data.Maybe
-import Data.Typeable
-import GHC.Generics
+import qualified Data.Map      as Map
+import           Data.Maybe    (fromMaybe)
+import           Data.Set      (Set)
+import qualified Data.Set      as Set
+import           Data.Typeable (Typeable ())
+import           GHC.Generics  (Generic ())
 
-import Inspection.Task
-import Inspection.Target
+import Data.Aeson.Extra (ToJSON)
+
 import Inspection.BuildConfig
+import Inspection.BuildMatrix
 import Inspection.PackageName
 import Inspection.ReleaseTag
-import Inspection.BuildMatrix
+import Inspection.Target
+import Inspection.Task
 
 newtype TaskQueue = TaskQueue (Set Task)
                   deriving (Show, Eq, Generic, Typeable)
@@ -41,7 +41,7 @@ selectTasks :: Maybe Compiler
             -> Maybe PackageName
             -> Maybe ReleaseTag
             -> TaskQueue -> TaskQueue
-selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion (TaskQueue queue) 
+selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion (TaskQueue queue)
   = TaskQueue $ Set.filter match queue
   where
     match Task{ taskBuildConfig = BuildConfig{..}
@@ -60,7 +60,7 @@ singleTask (TaskQueue queue)
 
 allYourTasks :: Bool -> BuildMatrix -> TaskQueue
 allYourTasks includeCompleted (BuildMatrix matrix) =
-  TaskQueue 
+  TaskQueue
     (Map.foldMapWithKey
       (\packageName -> Map.foldMapWithKey
         (\versionTag -> Map.foldMapWithKey

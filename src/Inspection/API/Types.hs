@@ -1,18 +1,18 @@
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
 module Inspection.API.Types
   ( Environment(..)
   , Inspector
   , inspectorToEither
   ) where
 
-import Control.Monad.Reader (ReaderT())
-import Control.Monad.Trans.Either (EitherT())
-import Data.Acid (AcidState())
+import Control.Monad.Reader       (ReaderT ())
+import Control.Monad.Trans.Either (EitherT ())
 
-import Servant ((:~>), runReaderTNat, ServantErr)
+import Data.Acid                  (AcidState ())
+import Servant ((:~>), ServantErr, runReaderTNat)
 
-import Inspection.Database (DB())
+import Inspection.Database
 
 data Environment
   = Environment { envAcid :: AcidState DB

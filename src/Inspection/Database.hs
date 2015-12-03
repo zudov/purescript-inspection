@@ -1,5 +1,5 @@
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies    #-}
 module Inspection.Database
   ( DB(..)
   , initialDB
@@ -8,20 +8,21 @@ module Inspection.Database
   , AppendBuildMatrix(..)
   ) where
 
-import Control.Monad.Reader
-import Control.Monad.State
-import Data.Acid
-import Data.SafeCopy
-import Data.Typeable
-import Data.Monoid
-import qualified Data.Map as Map
-import GHC.Generics
+import           Control.Monad.Reader (asks)
+import           Control.Monad.State  (modify, state)
+import qualified Data.Map             as Map
+import           Data.Monoid          ((<>))
+import           Data.Typeable        (Typeable)
+import           GHC.Generics         (Generic)
 
+import Data.Acid     (Query, Update, makeAcidic)
+import Data.SafeCopy (base, deriveSafeCopy)
+
+import Inspection.BuildConfig
 import Inspection.BuildMatrix
 import Inspection.BuildResult
-import Inspection.ReleaseTag
 import Inspection.PackageName
-import Inspection.BuildConfig
+import Inspection.ReleaseTag
 
 data DB = DB { buildMatrix :: BuildMatrix
              } deriving (Show, Eq, Generic, Typeable)

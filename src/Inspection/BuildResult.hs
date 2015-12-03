@@ -1,11 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Inspection.BuildResult where
 
+import Data.Data     (Data ())
+import Data.Typeable (Typeable ())
+import GHC.Generics  (Generic ())
+
 import Data.Aeson.Extra
-import Data.Typeable (Typeable())
-import Data.Data (Data())
-import GHC.Generics (Generic())
-import Data.SafeCopy
+import Data.SafeCopy    (base, deriveSafeCopy)
 
 data BuildResult = Success
                  | Failure

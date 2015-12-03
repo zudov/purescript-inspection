@@ -6,12 +6,12 @@ module Inspection.API.Sync
   , syncAPI
   ) where
 
-import Control.Monad.Reader
+import Control.Monad.Reader (asks, liftIO)
 import Control.Lens
-import Data.Acid
-import Data.Aeson (Value())
 import qualified Data.Text.Encoding as Text
 
+import Data.Acid 
+import Data.Aeson (Value())
 import Servant
 import Network.Wreq
 

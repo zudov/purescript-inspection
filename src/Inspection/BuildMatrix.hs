@@ -1,21 +1,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Inspection.BuildMatrix where
 
-import Control.Monad
+import           Control.Monad (forM)
+import           Data.Map      (Map)
+import qualified Data.Map      as Map
+import qualified Data.Set      as Set
+import           Data.Typeable (Typeable)
+import           GHC.Generics  (Generic)
+
 import Data.Aeson.Extra
-import Data.Map (Map)
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Data.SafeCopy
-import Data.Typeable
-import GHC.Generics
+import Data.SafeCopy    (base, deriveSafeCopy)
+import Network.Wreq     (withManager)
 
-import Network.Wreq (withManager)
-
-import Inspection.ReleaseTag
-import Inspection.PackageName
-import Inspection.BuildResult
 import Inspection.BuildConfig
+import Inspection.BuildResult
+import Inspection.PackageName
+import Inspection.ReleaseTag
 
 data BuildMatrix
   = BuildMatrix (Map PackageName -- ^ Packages
@@ -53,7 +53,7 @@ populatedBuildMatrix packages compilers = withManager $ \opts -> do
                                         (repeat buildConfigsMap))))
 
 addReleaseTag :: PackageName -> ReleaseTag -> BuildMatrix -> BuildMatrix
-addReleaseTag packageName releaseTag (BuildMatrix matrix) = 
+addReleaseTag packageName releaseTag (BuildMatrix matrix) =
   BuildMatrix (Map.adjust (Map.insertWith Map.union releaseTag
                                          (Map.fromSet (const []) buildConfigs))
                           packageName matrix)

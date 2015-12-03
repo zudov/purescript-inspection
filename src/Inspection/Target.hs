@@ -1,15 +1,15 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeFamilies      #-}
 module Inspection.Target where
 
-import Data.Aeson.Extra
-import Data.Typeable (Typeable())
-import Data.SafeCopy
-import GHC.Generics (Generic())
+import Data.Typeable (Typeable ())
+import GHC.Generics  (Generic ())
+
+import Data.Aeson.Extra (ToJSON)
+import Data.SafeCopy (deriveSafeCopy, base)
 
 import Inspection.PackageName
-
 import Inspection.ReleaseTag
 
 data Target = Target PackageName ReleaseTag
