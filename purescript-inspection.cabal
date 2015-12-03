@@ -25,6 +25,7 @@ library
                        Purescript.Inspection.Target
                        Purescript.Inspection.Task
                        Purescript.Inspection.TaskQueue
+                       Purescript.Inspection.AuthToken
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , bower-json
