@@ -9,13 +9,15 @@ module Inspection.API.Types
 import Control.Monad.Reader       (ReaderT ())
 import Control.Monad.Trans.Either (EitherT ())
 
-import Data.Acid                  (AcidState ())
-import Servant ((:~>), ServantErr, runReaderTNat)
+import Data.Acid           (AcidState ())
+import Network.HTTP.Client (Manager)
+import Servant             ((:~>), ServantErr, runReaderTNat)
 
 import Inspection.Database
 
 data Environment
-  = Environment { envAcid :: AcidState DB
+  = Environment { envAcid    :: AcidState DB
+                , envManager :: Manager
                 }
 
 type Inspector = ReaderT Environment (EitherT ServantErr IO)

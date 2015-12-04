@@ -3,7 +3,9 @@
 module Main where
 
 import Data.Acid                            (closeAcidState, openLocalState,
-                                             update)
+                                             update, createCheckpoint)
+import Network.HTTP.Client                  (newManager)
+import Network.HTTP.Client.TLS              (tlsManagerSettings)
 import Network.Wai                          (Application)
 import Network.Wai.Handler.Warp             (run)
 import Network.Wai.Middleware.Cors          (cors, simpleCorsResourcePolicy)
@@ -16,17 +18,22 @@ import           Inspection.BuildMatrix
 import qualified Inspection.Config      as Config
 import           Inspection.Database
 
+newEnvironment :: IO Environment
+newEnvironment = Environment <$> openLocalState initialDB
+                             <*> newManager tlsManagerSettings
+
 main :: IO ()
 main = do
   config <- Config.getConfig "inspection.yaml"
   populated <- populatedBuildMatrix (Config.packages config)
                                     (Config.compilers config)
-  acid <- openLocalState initialDB
-  update acid (AppendBuildMatrix populated)
+  env <- newEnvironment
+  update (envAcid env) (AppendBuildMatrix populated)
+  createCheckpoint (envAcid env)
 
-  run 8080 (app (Environment acid))
+  run 8080 (app env)
 
-  closeAcidState acid
+  closeAcidState (envAcid env)
 
 server :: Environment -> Server InspectorAPI
 server env = enter (inspectorToEither env) inspectorServer
