@@ -31,7 +31,8 @@ import           Network.URI           (escapeURIString, isUnreserved, parseURI,
                                         uriPath)
 import qualified Network.Wreq          as Wreq
 import           Servant.Common.Text   (FromText (..), ToText (..))
-import           Web.Bower.PackageMeta (PackageName (), runPackageName)
+
+import Inspection.PackageName
 
 -- | Release tags as they appear in Github's releases
 newtype ReleaseTag = ReleaseTag { runReleaseTag :: Text }
@@ -72,7 +73,7 @@ getReleaseTags manager (GithubLocation (GithubOwner owner) (GithubRepo repo)) = 
     opts = Wreq.defaults & Wreq.manager .~ Right manager
 
 getGithubLocation :: Manager -> PackageName -> IO GithubLocation
-getGithubLocation manager (runPackageName -> packageName) = do
+getGithubLocation manager packageName = do
   [gitUrl] <- (^.. Wreq.responseBody . key "url" . _String) <$> Wreq.getWith opts url
   putStrLn $ show gitUrl
   [_,GithubOwner -> owner, GithubRepo -> repo] <- either fail pure
@@ -82,5 +83,6 @@ getGithubLocation manager (runPackageName -> packageName) = do
                    (uriPath <$> parseURI (Text.unpack gitUrl))))
   pure (GithubLocation owner repo)
   where
-    url = "https://bower.herokuapp.com/packages/" <> escapeURIString isUnreserved packageName
+    url = "https://bower.herokuapp.com/packages/"
+       <> escapeURIString isUnreserved (Text.unpack (runPackageName packageName))
     opts = Wreq.defaults & Wreq.manager .~ Right manager

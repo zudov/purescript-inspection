@@ -31,7 +31,6 @@ library
                        Inspection.AuthToken
   build-depends:       base >= 4.7 && < 5
                      , containers
-                     , bower-json
                      , servant-server
                      , wai
                      , warp

@@ -17,7 +17,6 @@ import           Data.Aeson.Extra
 import           Data.Aeson.Types    (Options (..), defaultOptions)
 import           Data.SafeCopy       (base, deriveSafeCopy)
 import           Network.HTTP.Client (Manager)
-import qualified Network.Wreq        as Wreq
 import           Servant.Common.Text (FromText (..), ToText (..))
 
 import Inspection.ReleaseTag
