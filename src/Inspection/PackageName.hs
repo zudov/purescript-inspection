@@ -1,8 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell   #-}
 module Inspection.PackageName
-  ( PackageName
-  , runPackageName
+  ( PackageName(..)
   ) where
 
 import Data.Map  (Map)

@@ -13,12 +13,13 @@ import qualified Data.Text     as Text
 import           Data.Typeable (Typeable ())
 import           GHC.Generics  (Generic ())
 
-import           Data.Aeson.Extra
-import           Data.Aeson.Types    (Options (..), defaultOptions)
-import           Data.SafeCopy       (base, deriveSafeCopy)
-import           Network.HTTP.Client (Manager)
-import           Servant.Common.Text (FromText (..), ToText (..))
+import Data.Aeson.Extra
+import Data.Aeson.Types    (Options (..), defaultOptions)
+import Data.SafeCopy       (base, deriveSafeCopy)
+import Network.HTTP.Client (Manager)
+import Servant.Common.Text (FromText (..), ToText (..))
 
+import Inspection.PackageName
 import Inspection.ReleaseTag
 
 data BuildConfig
@@ -72,7 +73,7 @@ instance ToJSON Compiler where
   toJSON = toJSON . toText
 
 compilerRepo :: Compiler -> GithubLocation
-compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (GithubRepo "purescript")
+compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")
 
 getBuildConfigs :: Manager -> Compiler -> IO [BuildConfig]
 getBuildConfigs manager c =
