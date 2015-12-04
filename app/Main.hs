@@ -23,16 +23,16 @@ newEnvironment :: IO Environment
 newEnvironment = Environment <$> openLocalState initialDB
                              <*> newManager tlsManagerSettings
                              <*> getEnvironmentFlags
+                             <*> Config.getConfig "inspection.yaml"
 
 main :: IO ()
 main = do
-  config <- Config.getConfig "inspection.yaml"
-  populated <- populatedBuildMatrix (Config.packages config)
-                                    (Config.compilers config)
   env <- newEnvironment
-  update (envAcid env) (AppendBuildMatrix populated)
   createCheckpoint (envAcid env)
 
+  update (envAcid env) (AppendBuildMatrix
+                         (populatedBuildMatrix $ Config.packageNames
+                                               $ envConfig env))
   run 8080 (app env)
 
   closeAcidState (envAcid env)

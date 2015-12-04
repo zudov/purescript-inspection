@@ -15,11 +15,13 @@ import Servant             ((:~>), ServantErr, runReaderTNat)
 
 import Inspection.Database
 import Inspection.Flags
+import Inspection.Config
 
 data Environment
   = Environment { envAcid    :: AcidState DB
                 , envManager :: Manager
                 , envFlags   :: Flags
+                , envConfig  :: Config
                 }
 
 type Inspector = ReaderT Environment (EitherT ServantErr IO)

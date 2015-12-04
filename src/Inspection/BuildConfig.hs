@@ -20,6 +20,7 @@ import Network.HTTP.Client (Manager)
 import Servant.Common.Text (FromText (..), ToText (..))
 
 import Inspection.PackageName
+import Inspection.AuthToken
 import Inspection.ReleaseTag
 
 data BuildConfig
@@ -75,6 +76,6 @@ instance ToJSON Compiler where
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")
 
-getBuildConfigs :: Manager -> Compiler -> IO [BuildConfig]
-getBuildConfigs manager c =
-  map (BuildConfig c) <$> getReleaseTags manager (compilerRepo c)
+getBuildConfigs :: Manager -> AuthToken -> Compiler -> IO [BuildConfig]
+getBuildConfigs manager token c =
+  map (BuildConfig c) <$> getReleaseTags manager token (compilerRepo c)

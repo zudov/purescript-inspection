@@ -42,23 +42,15 @@ compilers :: BuildMatrix -> [Compiler]
 compilers (BuildMatrix matrix) =
   foldMap (foldMap (map buildConfigCompiler . Map.keys)) matrix
 
-populatedBuildMatrix :: [GithubLocation] -> [Compiler] -> IO BuildMatrix
-populatedBuildMatrix packages compilers = do
-  manager <- newManager tlsManagerSettings
-  buildConfigs <- concat <$> mapM (getBuildConfigs manager) compilers
-  let buildConfigsMap = Map.fromList (zip (take 5 buildConfigs)
-                                          (repeat []))
-  BuildMatrix . Map.fromList <$>
-    (forM packages $ \package@(GithubLocation _ packageName) -> do
-       releaseTags <- getReleaseTags manager package
-       pure (packageName, Map.fromList (zip (take 4 releaseTags)
-                                            (repeat buildConfigsMap))))
+populatedBuildMatrix :: [PackageName] -> BuildMatrix
+populatedBuildMatrix =
+  BuildMatrix . Map.fromSet (const Map.empty) . Set.fromList
 
 addReleaseTag :: PackageName -> ReleaseTag -> BuildMatrix -> BuildMatrix
 addReleaseTag packageName releaseTag (BuildMatrix matrix) =
   BuildMatrix (Map.adjust (Map.insertWith Map.union releaseTag
                                          (Map.fromSet (const []) buildConfigs))
-                          packageName matrix)
+                           packageName matrix)
   where
     buildConfigs :: Set.Set BuildConfig
     buildConfigs = foldMap Map.keysSet (Map.elems =<< Map.elems matrix)
