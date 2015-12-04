@@ -17,10 +17,12 @@ import           Inspection.API.Types
 import           Inspection.BuildMatrix
 import qualified Inspection.Config      as Config
 import           Inspection.Database
+import           Inspection.Flags
 
 newEnvironment :: IO Environment
 newEnvironment = Environment <$> openLocalState initialDB
                              <*> newManager tlsManagerSettings
+                             <*> getEnvironmentFlags
 
 main :: IO ()
 main = do

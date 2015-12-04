@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Inspection.AuthToken
-  ( AuthToken()
-  , runAuthToken
+  ( AuthToken(..)
   ) where
 
 import           Data.Text (Text ())

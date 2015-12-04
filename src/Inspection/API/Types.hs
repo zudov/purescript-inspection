@@ -14,10 +14,12 @@ import Network.HTTP.Client (Manager)
 import Servant             ((:~>), ServantErr, runReaderTNat)
 
 import Inspection.Database
+import Inspection.Flags
 
 data Environment
   = Environment { envAcid    :: AcidState DB
                 , envManager :: Manager
+                , envFlags   :: Flags
                 }
 
 type Inspector = ReaderT Environment (EitherT ServantErr IO)

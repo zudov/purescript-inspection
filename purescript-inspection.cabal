@@ -29,6 +29,7 @@ library
                        Inspection.Task
                        Inspection.TaskQueue
                        Inspection.AuthToken
+                       Inspection.Flags
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , servant-server
