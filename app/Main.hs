@@ -2,6 +2,8 @@
 {-# LANGUAGE TypeOperators #-}
 module Main where
 
+import Control.Exception (finally)
+
 import Data.Acid                            (closeAcidState, openLocalState,
                                              update, createCheckpoint)
 import Network.HTTP.Client                  (newManager)
@@ -28,14 +30,13 @@ newEnvironment = Environment <$> openLocalState initialDB
 main :: IO ()
 main = do
   env <- newEnvironment
-  createCheckpoint (envAcid env)
-
-  update (envAcid env) (AppendBuildMatrix
-                         (populatedBuildMatrix $ Config.packageNames
-                                               $ envConfig env))
-  run 8080 (app env)
-
-  closeAcidState (envAcid env)
+  finally
+    (do createCheckpoint (envAcid env)
+        update (envAcid env) (AppendBuildMatrix
+                               (populatedBuildMatrix $ Config.packageNames
+                                                     $ envConfig env))
+        run 8080 (app env))
+    (closeAcidState (envAcid env))
 
 server :: Environment -> Server InspectorAPI
 server env = enter (inspectorToEither env) inspectorServer

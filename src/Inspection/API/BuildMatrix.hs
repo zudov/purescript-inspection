@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 module Inspection.API.BuildMatrix
   ( BuildMatrixAPI
+  , AddBuildResultAPI
   , buildMatrixServer
   ) where
 
@@ -27,22 +28,20 @@ type BuildMatrixAPI =
           :> Get '[JSON] (Map ReleaseTag
                             (Map BuildConfig
                                  [BuildResult]))
-  :<|> Capture "packageName" PackageName
-       :> Capture "packageVersion" ReleaseTag
-          :> Capture "compiler" Compiler
-             :> Capture "compilerVersion" ReleaseTag
-                :> "success" :> Post '[JSON] [BuildResult]
-  :<|> Capture "packageName" PackageName
-       :> Capture "packageVersion" ReleaseTag
-          :> Capture "compiler" Compiler
-             :> Capture "compilerVersion" ReleaseTag
-                :> "failure" :> Post '[JSON] [BuildResult]
+  :<|> AddBuildResultAPI
+
+type AddBuildResultAPI
+  = Capture "packageName" PackageName
+    :> Capture "packageVersion" ReleaseTag
+       :> Capture "compiler" Compiler
+          :> Capture "compilerVersion" ReleaseTag
+             :> ReqBody '[JSON] BuildResult
+                :> Post '[JSON] [BuildResult]
 
 buildMatrixServer :: ServerT BuildMatrixAPI Inspector
 buildMatrixServer = getBuildMatrix
                :<|> getPackageReleases
-               :<|> addBuildResult Success
-               :<|> addBuildResult Failure
+               :<|> addBuildResult
 
 getBuildMatrix :: Inspector BuildMatrix
 getBuildMatrix = do
@@ -59,10 +58,9 @@ getPackageReleases packageName = do
     Just a  -> pure a
     Nothing -> lift (left err404)
 
-addBuildResult :: BuildResult
-               -> PackageName -> ReleaseTag -> Compiler -> ReleaseTag
+addBuildResult :: PackageName -> ReleaseTag -> Compiler -> ReleaseTag -> BuildResult
                -> Inspector [BuildResult]
-addBuildResult result packageName packageVersion compiler compilerVersion = do
+addBuildResult packageName packageVersion compiler compilerVersion result = do
   acid <- asks envAcid
   mResults <- liftIO (update acid (AddBuildResult packageName packageVersion
                                                   (BuildConfig compiler compilerVersion)

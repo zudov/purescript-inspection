@@ -5,7 +5,7 @@ import Data.Data     (Data ())
 import Data.Typeable (Typeable ())
 import GHC.Generics  (Generic ())
 
-import Data.Aeson.Extra (ToJSON (..), genericToJSON)
+import Data.Aeson.Extra (ToJSON (..), genericToJSON, FromJSON(..), genericParseJSON)
 import Data.Aeson.Types (Options (..), defaultOptions)
 import Data.SafeCopy    (base, deriveSafeCopy)
 
@@ -21,6 +21,13 @@ data Task = Task { taskBuildConfig :: BuildConfig
 
 instance ToJSON Task where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = modifier }
+    where
+      modifier "taskBuildConfig" = "buildConfig"
+      modifier "taskTarget" = "target"
+      modifier a = a
+
+instance FromJSON Task where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = modifier }
     where
       modifier "taskBuildConfig" = "buildConfig"
       modifier "taskTarget" = "target"

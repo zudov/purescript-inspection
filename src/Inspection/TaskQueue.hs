@@ -15,7 +15,7 @@ import qualified Data.Set      as Set
 import           Data.Typeable (Typeable ())
 import           GHC.Generics  (Generic ())
 
-import Data.Aeson.Extra (ToJSON)
+import Data.Aeson.Extra (ToJSON, FromJSON)
 
 import Inspection.BuildConfig
 import Inspection.BuildMatrix
@@ -32,6 +32,7 @@ instance Monoid TaskQueue where
   mappend (TaskQueue a) (TaskQueue b) = TaskQueue (mappend a b)
 
 instance ToJSON TaskQueue
+instance FromJSON TaskQueue
 
 addTask :: Task -> TaskQueue -> TaskQueue
 addTask task (TaskQueue queue) = TaskQueue $ Set.insert task queue

@@ -12,7 +12,7 @@ import Data.Data (Data)
 
 import Data.Aeson.Extra
 import Data.SafeCopy       (base, deriveSafeCopy)
-import Servant.Common.Text (FromText (..))
+import Servant.Common.Text (FromText(..), ToText(..))
 
 newtype PackageName = PackageName { runPackageName :: Text }
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
@@ -33,3 +33,6 @@ instance ToJSON a => ToJSON (Map PackageName a) where
 
 instance FromText PackageName where
   fromText = Just . PackageName
+
+instance ToText PackageName where
+  toText = runPackageName

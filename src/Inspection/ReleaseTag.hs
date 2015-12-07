@@ -15,7 +15,6 @@ import           Control.Monad      (mzero)
 import           Data.Data          (Data ())
 import           Data.Function      ((&))
 import           Data.Map           (Map)
-import           Data.Maybe         (fromMaybe)
 import           Data.Monoid        ((<>))
 import           Data.Text          (Text)
 import qualified Data.Text          as Text
@@ -27,8 +26,7 @@ import           Data.Aeson.Extra
 import           Data.Aeson.Lens     (key, values, _String)
 import           Data.SafeCopy       (base, deriveSafeCopy)
 import           Network.HTTP.Client (Manager)
-import           Network.URI         (escapeURIString, isUnreserved, parseURI,
-                                      uriPath)
+import           Network.URI         (escapeURIString, isUnreserved)
 import qualified Network.Wreq        as Wreq
 import           Servant.Common.Text (FromText (..), ToText (..))
 
@@ -55,6 +53,9 @@ deriveSafeCopy 0 'base ''ReleaseTag
 
 instance ToJSON ReleaseTag where
   toJSON = toJSON . runReleaseTag
+
+instance FromJSON ReleaseTag where
+  parseJSON = fmap ReleaseTag . parseJSON
 
 data GithubLocation = GithubLocation GithubOwner PackageName
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)

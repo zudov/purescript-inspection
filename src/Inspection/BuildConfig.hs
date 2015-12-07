@@ -66,6 +66,13 @@ instance ToJSON BuildConfig where
       modifier "buildConfigCompilerRelease" = "compilerRelease"
       modifier a = a
 
+instance FromJSON BuildConfig where
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = modifier }
+    where
+      modifier "buildConfigCompiler" = "compiler"
+      modifier "buildConfigCompilerRelease" = "compilerRelease"
+      modifier a = a
+
 instance FromJSON Compiler where
   parseJSON (String s) = maybe mzero pure (fromText s)
   parseJSON _ = fail "'Compiler' should be a String"

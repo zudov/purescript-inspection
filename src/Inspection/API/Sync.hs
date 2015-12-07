@@ -9,30 +9,23 @@ module Inspection.API.Sync
   , syncServer
   ) where
 
-import           Control.Lens
-import           Control.Monad.Reader       (ask, asks, lift, liftIO)
-import           Control.Monad.Trans.Either (left)
-import           Data.List                  (sort)
-import           Data.Maybe                 (fromMaybe)
-import qualified Data.Text.Encoding         as Text
+import Control.Monad.Reader       (ask, lift, liftIO)
+import Control.Monad.Trans.Either (left)
+import Data.List                  (sort)
+import Data.Maybe                 (fromMaybe)
 
 import Data.Acid
-import Data.Aeson   (Value ())
-import Network.Wreq
 import Servant
 
+import Inspection.API.Types
 import Inspection.AuthToken
 import Inspection.BuildConfig
 import Inspection.BuildMatrix
-import Inspection.BuildResult
 import Inspection.Config
 import Inspection.Database
+import Inspection.Flags
 import Inspection.PackageName
 import Inspection.ReleaseTag
-import Inspection.TaskQueue
-
-import Inspection.API.Types
-import Inspection.Flags
 
 type SyncAPI =
   Header "Authorization" AuthToken :> (

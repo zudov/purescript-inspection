@@ -15,3 +15,4 @@ data BuildResult = Success
 deriveSafeCopy 0 'base ''BuildResult
 
 instance ToJSON BuildResult
+instance FromJSON BuildResult

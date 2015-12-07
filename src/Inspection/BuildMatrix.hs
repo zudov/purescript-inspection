@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Inspection.BuildMatrix where
 
-import           Control.Monad (forM)
 import           Data.Map      (Map)
 import qualified Data.Map      as Map
 import qualified Data.Set      as Set
@@ -10,8 +9,6 @@ import           GHC.Generics  (Generic)
 
 import Data.Aeson.Extra
 import Data.SafeCopy           (base, deriveSafeCopy)
-import Network.HTTP.Client     (newManager)
-import Network.HTTP.Client.TLS (tlsManagerSettings)
 
 import Inspection.BuildConfig
 import Inspection.BuildResult
