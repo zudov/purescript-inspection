@@ -16,6 +16,7 @@
     "purescript-maps": "~0.5.3",
     "purescript-generics": "~0.7.0",
     "purescript-affjax": "~0.10.0",
-    "purescript-argonaut-codecs": "~0.5.0"
+    "purescript-argonaut-codecs": "~0.5.0",
+    "purescript-foreign-generic": "~0.3.0"
   }
 }

@@ -4,6 +4,7 @@ import Prelude
 
 import Control.Monad.Aff (runAff, Aff())
 
+import Control.Bind
 import Data.Array ((:))
 import Data.Array as Array
 import Data.Argonaut.Core
@@ -32,17 +33,26 @@ data Query a
 
 data BuildResult
   = Success
-  | Failure
+  | Warnings String
+  | Failure String
 
 instance decodeJsonBuildResult :: DecodeJson BuildResult where
-  decodeJson j = case toString j of
-                   Nothing -> Left "Expected a string"
-                   Just "Success" -> Right Success
-                   Just "Failure" -> Right Failure
+  decodeJson = foldJsonObject (Left "BuildResult: expected an object") decode
+    where
+      decode obj =
+        case StrMap.lookup "tag" obj >>= toString of 
+          Nothing         -> Left "BuildResult: 'tag' is missing"
+          Just "Success"  -> Right Success
+          Just "Warnings" -> Warnings <$> contents
+          Just "Failure"  -> Failure  <$> contents
+          Just x -> Left ("Unexpected tag value '" <> x <> "'")
+        where
+          contents = maybe (Left "'contents' is mising")
+                           Right
+                           (toString =<< StrMap.lookup "contents" obj)
 
 instance showBuildResult :: Show BuildResult where
-  show Success = "Success"
-  show Failure = "Failure"
+  show = gShow
 
 instance eqBuildResult :: Eq BuildResult where
   eq = gEq
@@ -107,7 +117,10 @@ packageMatrix = component render eval
                         Just { head = Success } ->
                           H.td [ P.class_ (H.className "success") ]
                                [ H.text "+" ]
-                        Just { head = Failure } ->
+                        Just { head = Warnings _ } ->
+                          H.td [ P.class_ (H.className "warnings") ]
+                               [ H.text "+" ]
+                        Just { head = Failure _ } ->
                           H.td [ P.class_ (H.className "failure") ]
                                [ H.text "-" ]
                     )))

@@ -11,6 +11,10 @@ table, td, th {
   background-color: green;
 }
 
+.warnings {
+  background-color: yellow;
+}
+
 .failure {
   background-color: red;
 }
