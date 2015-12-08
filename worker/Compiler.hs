@@ -1,19 +1,19 @@
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns      #-}
 -- | Takes care about downloading compiler's binary and running it
 
 module Compiler
   ( runBuild ) where
 
-import           Control.Monad        (unless, void)
-import           Data.Monoid          ((<>))
-import qualified Data.Text            as Text
-import           System.Directory     (createDirectoryIfMissing,
-                                       doesDirectoryExist)
-import           System.Exit          (ExitCode (..))
-import           System.FilePath      ((</>))
-import           System.Process       (callProcess, readProcessWithExitCode)
+import           Control.Monad    (unless, void)
+import           Data.Monoid      ((<>))
+import qualified Data.Text        as Text
+import           System.Directory (createDirectoryIfMissing, doesDirectoryExist)
+import           System.Exit      (ExitCode (..))
+import           System.FilePath  ((</>))
+import           System.Process   (callProcess, readProcessWithExitCode)
 
-import           Servant.Common.Text
+import Servant.Common.Text
 
 import Inspection.BuildResult
 import Inspection.ReleaseTag
@@ -52,9 +52,11 @@ runBuild :: ReleaseTag
 runBuild tag sources ffiSources = do
   psc <- getCompiler tag
   putStrLn ("  Compiling")
-  (exitcode, _stdout, _stderr) <- readProcessWithExitCode psc args ""
+  (exitcode, Text.pack -> _stdout, Text.pack -> stderr) <- readProcessWithExitCode psc args ""
   pure $ case exitcode of
-    ExitSuccess -> Success
-    ExitFailure _code -> Failure
+    ExitSuccess
+      | "Warning found:" `Text.isInfixOf` stderr -> Warnings stderr
+      | otherwise -> Success
+    ExitFailure _code -> Failure stderr
   where
-    args = [ sources, "-f", ffiSources]
+    args = [ sources, "-f", ffiSources ]

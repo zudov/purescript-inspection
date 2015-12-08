@@ -1,4 +1,5 @@
 {-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
@@ -65,7 +66,7 @@ main = do
     case bowerExitCode of
       ExitFailure _code -> do
         putStrLn "  Reporting: bower failure"
-        runEitherT $ addBuildResult packageName packageVersion compiler compilerVersion Failure
+        runEitherT $ addBuildResult packageName packageVersion compiler compilerVersion (Failure "")
       ExitSuccess -> do
         buildResult <- runBuild compilerVersion "bower_components/purescript-*/src/**/*.purs"
                                                 "bower_components/purescript-*/src/**/*.js"
