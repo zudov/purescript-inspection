@@ -1,20 +1,29 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
 module Inspection.API.Tasks
   ( TasksAPI
   , tasksServer
   ) where
 
-import Control.Monad.Reader (asks, liftIO)
+import Control.Concurrent.Async   (mapConcurrently)
+import Control.Monad.Reader (ask, liftIO)
+import Data.List (sort)
 
-import Data.Acid (query)
+import Data.Acid (query, update)
+import Network.HTTP.Client (Manager)
 import Servant
 
+import qualified Inspection.Config as Config
 import Inspection.TaskQueue
 import Inspection.ReleaseTag
 import Inspection.Database
 import Inspection.BuildConfig
 import Inspection.PackageName
+import Inspection.BuildMatrix
+import Inspection.Flags
+import Inspection.AuthToken
 import Inspection.API.Types
 
 type TasksAPI =
@@ -31,10 +40,38 @@ tasksServer = getQueue
 getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
          -> Bool -> Inspector TaskQueue
 getQueue mCompiler mCompilerVersion mPackageName mPackageVersion rebuild = do
-  acid <- asks envAcid
-  matrix <- liftIO (query acid GetBuildMatrix)
-  let newTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
-               $ allYourTasks rebuild
-               $ matrix
-  pure newTasks 
+  Environment{..} <- ask
+  sync mCompiler mPackageName (githubAuthToken envFlags)
+  matrix <- liftIO (query envAcid GetBuildMatrix)
+  pure $ selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
+       $ allYourTasks rebuild
+       $ matrix
 
+sync :: Maybe Compiler -> Maybe PackageName -> AuthToken -> Inspector ()
+sync mCompiler mPackageName token = do
+  Environment{..} <- ask
+  matrix <- liftIO (query envAcid GetBuildMatrix)
+  packagesSynced <-
+    liftIO (syncPackages
+              envManager
+              token
+              (maybe (Config.packages envConfig) (:[])
+                     (flip Config.packageLocation envConfig =<< mPackageName))
+              matrix)
+  buildConfigsSynced <-
+    liftIO (syncBuildConfigs
+              envManager
+              token
+              (maybe (Config.compilers envConfig) (:[]) mCompiler)
+              packagesSynced)
+  liftIO (update envAcid (AppendBuildMatrix buildConfigsSynced))
+
+syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> BuildMatrix -> IO BuildMatrix
+syncBuildConfigs manager token compilers matrix =
+  foldr addBuildConfig matrix . concatMap (take 5 . reverse . sort)
+    <$> mapConcurrently (getBuildConfigs manager token) compilers
+
+syncPackages :: Manager -> AuthToken -> [GithubLocation] -> BuildMatrix -> IO BuildMatrix
+syncPackages manager token locations matrix =
+  foldr (\(name, tags) m -> foldr (addReleaseTag name) m (take 5 $ reverse $ sort tags)) matrix <$>
+    mapConcurrently (\(l@(GithubLocation _ name)) -> (name,) <$> getReleaseTags manager token l) locations
