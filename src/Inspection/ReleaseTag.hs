@@ -5,12 +5,14 @@
 {-# LANGUAGE ViewPatterns      #-}
 module Inspection.ReleaseTag
   ( ReleaseTag(..)
+  , Release(..)
   , GithubLocation(..)
   , GithubOwner(..)
+  , getReleases
   , getReleaseTags
   ) where
 
-import           Control.Lens       ((.~), (^..))
+import           Control.Lens
 import           Control.Monad      (mzero)
 import           Data.Data          (Data ())
 import           Data.Function      ((&))
@@ -19,11 +21,12 @@ import           Data.Monoid        ((<>))
 import           Data.Text          (Text)
 import qualified Data.Text          as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Time.Clock    (UTCTime)
 import           Data.Typeable      (Typeable ())
 import           GHC.Generics       (Generic ())
 
 import           Data.Aeson.Extra
-import           Data.Aeson.Lens     (key, values, _String)
+import           Data.Aeson.Lens
 import           Data.SafeCopy       (base, deriveSafeCopy)
 import           Network.HTTP.Client (Manager)
 import           Network.URI         (escapeURIString, isUnreserved)
@@ -32,6 +35,16 @@ import           Servant.Common.Text (FromText (..), ToText (..))
 
 import Inspection.AuthToken
 import Inspection.PackageName
+
+data Release = Release { releaseTag         :: ReleaseTag
+                       , releasePublishedAt :: UTCTime
+                       }
+             deriving (Show, Eq, Ord)
+
+instance FromJSON Release where
+  parseJSON (Object o) = Release <$> (ReleaseTag <$> o .: "tag_name")
+                                 <*> (o .: "published_at")
+  parseJSON _ = mzero
 
 -- | Release tags as they appear in Github's releases
 newtype ReleaseTag = ReleaseTag { runReleaseTag :: Text }
@@ -57,7 +70,9 @@ instance ToJSON ReleaseTag where
 instance FromJSON ReleaseTag where
   parseJSON = fmap ReleaseTag . parseJSON
 
-data GithubLocation = GithubLocation GithubOwner PackageName
+data GithubLocation = GithubLocation { githubOwner :: GithubOwner
+                                     , githubPackageName :: PackageName
+                                     }
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
 newtype GithubOwner = GithubOwner Text
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
@@ -67,11 +82,10 @@ instance FromJSON GithubLocation where
     pure (GithubLocation (GithubOwner owner) (PackageName packageName))
   parseJSON _ = mzero
 
-
-getReleaseTags :: Manager -> AuthToken -> GithubLocation -> IO [ReleaseTag]
-getReleaseTags manager token (GithubLocation (GithubOwner owner) (PackageName repo)) = do
+getReleases :: Manager -> AuthToken -> GithubLocation -> IO [Release]
+getReleases manager token (GithubLocation (GithubOwner owner) (PackageName repo)) = do
   response <- Wreq.getWith opts url
-  pure (ReleaseTag <$> (response ^.. Wreq.responseBody . values . key "tag_name" . _String))
+  decode (response ^. Wreq.responseBody)
   where
     url = "https://api.github.com/repos/"
             <> escapeURIString isUnreserved (Text.unpack owner) <> "/"
@@ -79,3 +93,6 @@ getReleaseTags manager token (GithubLocation (GithubOwner owner) (PackageName re
     opts = Wreq.defaults
              & Wreq.manager .~ Right manager
              & Wreq.header "Authorization" .~ [Text.encodeUtf8 (toText token)]
+
+getReleaseTags :: Manager -> AuthToken -> GithubLocation -> IO [ReleaseTag]
+getReleaseTags manager token location = map releaseTag <$> getReleases manager token location

@@ -55,6 +55,7 @@ library
                      , text
                      , either
                      , async
+                     , time
   default-language:    Haskell2010
   default-extensions:  DeriveGeneric
                        DeriveDataTypeable
