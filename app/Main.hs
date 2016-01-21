@@ -1,16 +1,20 @@
 {-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
 module Main where
 
 import Control.Exception (finally)
+import Data.Monoid       ((<>))
 
-import Data.Acid                            (closeAcidState, openLocalState,
-                                             update, createCheckpoint)
+import Data.Acid                            (closeAcidState, createCheckpoint,
+                                             openLocalState, update)
 import Network.HTTP.Client                  (newManager)
 import Network.HTTP.Client.TLS              (tlsManagerSettings)
 import Network.Wai                          (Application)
 import Network.Wai.Handler.Warp             (run)
-import Network.Wai.Middleware.Cors          (cors, simpleCorsResourcePolicy)
+import Network.Wai.Middleware.Cors          (CorsResourcePolicy (..), cors,
+                                             simpleCorsResourcePolicy,
+                                             simpleHeaders, simpleMethods)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Servant
 
@@ -47,3 +51,6 @@ app env = logStdoutDev $ cors (const (Just corsPolicy))
                                (server env :<|> serveDirectory "frontend/dist/")
   where
     corsPolicy = simpleCorsResourcePolicy
+                  { corsMethods        = simpleMethods <> ["DELETE", "PUT", "PATCH"]
+                  , corsRequestHeaders = simpleHeaders <> ["content-type"]
+                  }
