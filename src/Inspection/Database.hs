@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE TypeFamilies #-}
 module Inspection.Database
   ( DB(..)
   , initialDB
@@ -23,12 +23,17 @@ import Inspection.BuildMatrix
 import Inspection.BuildResult
 import Inspection.PackageName
 import Inspection.ReleaseTag
+import Inspection.Event (Event)
+import Inspection.EventLog (EventLog, EventRecord(..))
+import qualified Inspection.EventLog as EventLog
 
 data DB = DB { buildMatrix :: BuildMatrix
+             , eventLog :: EventLog Event
              } deriving (Show, Eq, Generic, Typeable)
 
 initialDB :: DB
 initialDB = DB { buildMatrix = mempty
+               , eventLog = EventLog.empty
                }
 
 deriveSafeCopy 0 'base ''DB

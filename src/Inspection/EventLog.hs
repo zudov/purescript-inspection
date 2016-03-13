@@ -37,6 +37,7 @@ data EventRecord a
   deriving (Functor, Foldable, Show, Eq)
 
 deriveSafeCopy 0 'base ''EventRecord
+deriveSafeCopy 0 'base ''EventLog
 
 empty :: EventLog a
 empty = EventLog []
