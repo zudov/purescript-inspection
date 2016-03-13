@@ -6,6 +6,8 @@ module Inspection.Database
   , GetBuildMatrix(..)
   , AddBuildResult(..)
   , AppendBuildMatrix(..)
+  , GetEventLog(..)
+  , AddEventRecord(..)
   ) where
 
 import           Control.Monad.Reader (asks)
@@ -47,6 +49,9 @@ addEventRecord eventRecord =
          }
     )
 
+getEventLog :: Query DB (EventLog Event)
+getEventLog = asks eventLog
+
 getBuildMatrix :: Query DB BuildMatrix
 getBuildMatrix = asks buildMatrix
 
@@ -73,4 +78,5 @@ makeAcidic ''DB [ 'getBuildMatrix
                 , 'appendBuildMatrix
                 , 'addBuildResult
                 , 'addEventRecord
+                , 'getEventLog
                 ]
