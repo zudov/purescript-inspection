@@ -3,7 +3,7 @@ module Inspection.Flags
   , getEnvironmentFlags
   ) where
 
-import qualified Data.Text as Text
+import qualified Data.ByteString.Char8 as ByteString.Char8
 
 import System.Environment (getEnv)
 
@@ -14,4 +14,4 @@ data Flags = Flags { githubAuthToken :: AuthToken
 
 getEnvironmentFlags :: IO Flags
 getEnvironmentFlags =
-  Flags <$> (AuthToken . Text.pack <$> getEnv "INSPECTION_GITHUB_AUTH_TOKEN")
+  Flags <$> (AuthToken . ByteString.Char8.pack <$> getEnv "INSPECTION_GITHUB_AUTH_TOKEN")

@@ -3,17 +3,20 @@ module Inspection.AuthToken
   ( AuthToken(..)
   ) where
 
-import           Data.Text (Text ())
+
 import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import           Data.ByteString (ByteString)
+
 
 import Servant.Common.Text
 
-newtype AuthToken = AuthToken { runAuthToken :: Text } deriving (Show, Eq)
+newtype AuthToken = AuthToken { runAuthToken :: ByteString } deriving (Show, Eq)
 
 instance FromText AuthToken where
   fromText t = case Text.words t of
-    ["token", token] -> Just (AuthToken token)
+    ["token", token] -> Just (AuthToken (encodeUtf8 token))
     _                -> Nothing
 
 instance ToText AuthToken where
-  toText (AuthToken token) = Text.unwords ["token", token]
+  toText (AuthToken token) = Text.unwords ["token", decodeUtf8 token]
