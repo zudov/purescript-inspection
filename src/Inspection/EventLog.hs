@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Inspection.EventLog
   ( EventLog()
+  , EventId(..)
   , EventRecord(..)
   , empty
   , add
@@ -46,6 +47,8 @@ add :: EventRecord a -> EventLog a -> EventLog a
 add record (EventLog eventLog) = EventLog (record : eventLog)
 
 newtype EventId = EventId Int deriving (Eq, Ord, Show)
+
+deriveSafeCopy 0 'base ''EventId
 
 index :: EventId -> EventLog a -> Maybe (EventRecord a)
 index (EventId n) (EventLog eventLog) = atMay (reverse eventLog) n

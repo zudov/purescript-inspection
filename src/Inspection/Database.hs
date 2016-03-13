@@ -24,7 +24,7 @@ import Inspection.BuildResult
 import Inspection.PackageName
 import Inspection.ReleaseTag
 import Inspection.Event (Event)
-import Inspection.EventLog (EventLog, EventRecord(..))
+import Inspection.EventLog (EventLog, EventRecord(..), EventId(..))
 import qualified Inspection.EventLog as EventLog
 
 data DB = DB { buildMatrix :: BuildMatrix
@@ -37,6 +37,15 @@ initialDB = DB { buildMatrix = mempty
                }
 
 deriveSafeCopy 0 'base ''DB
+
+addEventRecord :: EventRecord Event -> Update DB EventId
+addEventRecord eventRecord =
+  state $ \db ->
+    ( EventId $ length $ eventLog db
+    , db { buildMatrix = execute (eventBody eventRecord) (buildMatrix db)
+         , eventLog = EventLog.add eventRecord (eventLog db)
+         }
+    )
 
 getBuildMatrix :: Query DB BuildMatrix
 getBuildMatrix = asks buildMatrix
@@ -63,4 +72,5 @@ addBuildResult packageName packageVersion buildConfig result
 makeAcidic ''DB [ 'getBuildMatrix
                 , 'appendBuildMatrix
                 , 'addBuildResult
+                , 'addEventRecord
                 ]
