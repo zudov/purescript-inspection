@@ -45,5 +45,7 @@ empty = EventLog []
 add :: EventRecord a -> EventLog a -> EventLog a
 add record (EventLog eventLog) = EventLog (record : eventLog)
 
-index :: Int -> EventLog a -> Maybe (EventRecord a)
-index n (EventLog eventLog) = atMay (reverse eventLog) n
+newtype EventId = EventId Int deriving (Eq, Ord, Show)
+
+index :: EventId -> EventLog a -> Maybe (EventRecord a)
+index (EventId n) (EventLog eventLog) = atMay (reverse eventLog) n
