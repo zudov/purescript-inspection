@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators #-}
@@ -26,10 +27,12 @@ import           Inspection.Database
 import           Inspection.Flags
 
 newEnvironment :: IO Environment
-newEnvironment = Environment <$> openLocalState initialDB
-                             <*> newManager tlsManagerSettings
-                             <*> getEnvironmentFlags
-                             <*> Config.getConfig "inspection.yaml"
+newEnvironment = do
+  envFlags   <- getEnvironmentFlags
+  envConfig  <- Config.getConfig "inspection.yaml"
+  envManager <- newManager tlsManagerSettings
+  envAcid    <- openLocalState initialDB
+  pure Environment{..}
 
 main :: IO ()
 main = do
