@@ -7,7 +7,7 @@ module Inspection.EventLog
   ( EventLog()
   , EventRecord(..)
   , empty
-  , cons
+  , add
   , index
   ) where
 
@@ -21,8 +21,13 @@ import Data.SafeCopy
 --        0(1) concat would also be nice
 newtype EventLog a
   = EventLog [EventRecord a]
-  deriving (Functor, Foldable, Show, Eq, Monoid)
+  deriving (Show, Eq)
 
+instance Functor EventLog where
+  fmap f (EventLog records) = EventLog $ fmap (fmap f) $ reverse records
+
+instance Foldable EventLog where
+  foldMap f (EventLog records) = foldMap (foldMap f) $ reverse records
 
 data EventRecord a
   = EventRecord
@@ -36,8 +41,8 @@ deriveSafeCopy 0 'base ''EventRecord
 empty :: EventLog a
 empty = EventLog []
 
-cons :: EventRecord a -> EventLog a -> EventLog a
-cons record (EventLog eventLog) = EventLog (record : eventLog)
+add :: EventRecord a -> EventLog a -> EventLog a
+add record (EventLog eventLog) = EventLog (record : eventLog)
 
 index :: Int -> EventLog a -> Maybe (EventRecord a)
 index n (EventLog eventLog) = atMay (reverse eventLog) n
