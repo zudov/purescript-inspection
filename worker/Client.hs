@@ -16,6 +16,8 @@ import Inspection.ReleaseTag
 import Inspection.BuildResult
 import Inspection.PackageName
 import Inspection.BuildConfig
+import Inspection.AuthToken
+import Inspection.EventLog
 
 host :: BaseUrl
 host = BaseUrl Http "localhost" 8080
@@ -28,6 +30,7 @@ getTasks :: Maybe Compiler
          -> EitherT ServantError IO TaskQueue
 getTasks = client (Proxy :: Proxy ("tasks" :> TasksAPI)) host
 
-addBuildResult :: PackageName -> ReleaseTag -> Compiler -> ReleaseTag -> BuildResult
-               -> EitherT ServantError IO [BuildResult]
+addBuildResult
+  :: Maybe AuthToken -> PackageName -> ReleaseTag -> Compiler -> ReleaseTag -> BuildResult
+  -> EitherT ServantError IO EventId
 addBuildResult = client (Proxy :: Proxy ("matrix" :> AddBuildResultAPI)) host

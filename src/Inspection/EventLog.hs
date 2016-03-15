@@ -13,7 +13,7 @@ module Inspection.EventLog
   ) where
 
 import Safe (atMay)
-
+import Data.Aeson (ToJSON, toJSON, FromJSON, parseJSON)
 import Data.Time.Clock (UTCTime)
 
 import Data.SafeCopy
@@ -47,6 +47,12 @@ add :: EventRecord a -> EventLog a -> EventLog a
 add record (EventLog eventLog) = EventLog (record : eventLog)
 
 newtype EventId = EventId Int deriving (Eq, Ord, Show)
+
+instance ToJSON EventId where
+  toJSON (EventId n) = toJSON n
+
+instance FromJSON EventId where
+  parseJSON = fmap EventId . parseJSON
 
 deriveSafeCopy 0 'base ''EventId
 
