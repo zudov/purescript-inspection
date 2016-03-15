@@ -62,10 +62,6 @@ compilers :: BuildMatrix -> [Compiler]
 compilers (BuildMatrix matrix) =
   foldMap (foldMap (map buildConfigCompiler . Map.keys)) matrix
 
-populatedBuildMatrix :: [PackageName] -> BuildMatrix
-populatedBuildMatrix =
-  BuildMatrix . Map.fromSet (const Map.empty) . Set.fromList
-
 addReleaseTag :: PackageName -> ReleaseTag -> BuildMatrix -> BuildMatrix
 addReleaseTag packageName releaseTag (BuildMatrix matrix) =
   BuildMatrix (Map.adjust (Map.insertWith Map.union releaseTag

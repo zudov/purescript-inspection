@@ -41,13 +41,13 @@ getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe Rel
          -> Bool -> Inspector TaskQueue
 getQueue mCompiler mCompilerVersion mPackageName mPackageVersion rebuild = do
   Environment{..} <- ask
-  sync mCompiler mPackageName (githubAuthToken envFlags)
-  matrix <- liftIO (query envAcid GetBuildMatrix)
+  matrix <- sync mCompiler mPackageName (githubAuthToken envFlags)
   pure $ selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
        $ allYourTasks rebuild
        $ matrix
 
-sync :: Maybe Compiler -> Maybe PackageName -> AuthToken -> Inspector ()
+
+sync :: Maybe Compiler -> Maybe PackageName -> AuthToken -> Inspector BuildMatrix
 sync mCompiler mPackageName token = do
   Environment{..} <- ask
   matrix <- liftIO (query envAcid GetBuildMatrix)
@@ -58,13 +58,11 @@ sync mCompiler mPackageName token = do
               (maybe (Config.packages envConfig) (:[])
                      (flip Config.packageLocation envConfig =<< mPackageName))
               matrix)
-  buildConfigsSynced <-
-    liftIO (syncBuildConfigs
-              envManager
-              token
-              (maybe (Config.compilers envConfig) (:[]) mCompiler)
-              packagesSynced)
-  liftIO (update envAcid (AppendBuildMatrix buildConfigsSynced))
+  liftIO (syncBuildConfigs
+            envManager
+            token
+            (maybe (Config.compilers envConfig) (:[]) mCompiler)
+            packagesSynced)
 
 syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> BuildMatrix -> IO BuildMatrix
 syncBuildConfigs manager token compilers matrix =

@@ -4,7 +4,6 @@ module Inspection.Database
   ( DB(..)
   , initialDB
   , GetBuildMatrix(..)
-  , AppendBuildMatrix(..)
   , GetEventLog(..)
   , AddEventRecord(..)
   ) where
@@ -54,11 +53,7 @@ getEventLog = asks eventLog
 getBuildMatrix :: Query DB BuildMatrix
 getBuildMatrix = asks buildMatrix
 
-appendBuildMatrix :: BuildMatrix -> Update DB ()
-appendBuildMatrix matrix = modify (\db -> db { buildMatrix = buildMatrix db <> matrix })
-
 makeAcidic ''DB [ 'getBuildMatrix
-                , 'appendBuildMatrix
                 , 'addEventRecord
                 , 'getEventLog
                 ]
