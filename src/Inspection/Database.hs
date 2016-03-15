@@ -11,7 +11,7 @@ module Inspection.Database
 import           Control.Monad.Reader (asks)
 import           Control.Monad.State  (modify, state)
 
-import           Data.Monoid          ((<>))
+
 import           Data.Typeable        (Typeable)
 import           GHC.Generics         (Generic)
 

@@ -5,7 +5,8 @@ module Inspection.TaskQueue
   , addTask
   , selectTasks
   , singleTask
-  , allYourTasks
+  , completedTasks
+  , difference
   ) where
 
 import qualified Data.Map      as Map
@@ -37,6 +38,9 @@ instance FromJSON TaskQueue
 addTask :: Task -> TaskQueue -> TaskQueue
 addTask task (TaskQueue queue) = TaskQueue $ Set.insert task queue
 
+difference :: TaskQueue -> TaskQueue -> TaskQueue
+difference (TaskQueue a) (TaskQueue b) = TaskQueue $ Set.difference a b
+
 selectTasks :: Maybe Compiler
             -> Maybe ReleaseTag
             -> Maybe PackageName
@@ -55,18 +59,16 @@ selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion (TaskQueue q
                          ])
 
 singleTask :: TaskQueue -> Maybe Task
-singleTask (TaskQueue queue)
-  | Set.null queue = Nothing
-  | otherwise = Just $ head $ Set.toList queue
+singleTask (TaskQueue queue) = fst <$> Set.minView queue
 
-allYourTasks :: Bool -> BuildMatrix -> TaskQueue
-allYourTasks includeCompleted (BuildMatrix matrix) =
+completedTasks :: BuildMatrix -> TaskQueue
+completedTasks (BuildMatrix matrix) =
   TaskQueue
     (Map.foldMapWithKey
       (\packageName -> Map.foldMapWithKey
         (\versionTag -> Map.foldMapWithKey
           (\buildConfig results ->
-            if null results || includeCompleted
-            then Set.singleton (Task buildConfig (Target packageName versionTag))
-            else Set.empty)))
+            if null results
+            then Set.empty
+            else Set.singleton (Task buildConfig (Target packageName versionTag)))))
       matrix)
