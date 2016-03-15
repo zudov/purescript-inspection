@@ -18,7 +18,6 @@ library
                        Inspection.API.Types
                        Inspection.API.BuildMatrix
                        Inspection.API.Tasks
-                       Inspection.API.Sync
                        Inspection.BuildConfig
                        Inspection.BuildMatrix
                        Inspection.BuildResult
