@@ -54,3 +54,6 @@ packages:
   - "purescript/purescript-coproducts"
   - "purescript/purescript-const"
   - "purescript/purescript-bifunctors"
+
+releaseFilter:
+  publishedAfter: "2016-01-01T00:00:00Z"

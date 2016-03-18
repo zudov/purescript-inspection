@@ -79,13 +79,13 @@ addBuildResult (Just authToken) packageName packageVersion compiler compilerVers
     Nothing -> lift $ left $ err404 {errBody = encode $ object
                        [ "errors" .= [ "The package wasn't added to inspection" :: String ]]}
     Just githubLocation -> do
-      packageVersions <- liftIO $ getReleaseTags envManager authToken githubLocation
+      packageVersions <- liftIO $ getReleaseTags envManager authToken githubLocation defaultReleaseFilter
       if packageVersion `notElem` packageVersions
         then
           lift $ left $ err404 { errBody = encode $ object
                    [ "errors" .= [ "Unknown package version" :: String ]]}
         else do
-          buildConfigs <- liftIO $ getBuildConfigs envManager authToken compiler
+          buildConfigs <- liftIO $ getBuildConfigs envManager authToken compiler defaultReleaseFilter
           let buildConfig = BuildConfig compiler compilerVersion
           if buildConfig `notElem` buildConfigs
              then

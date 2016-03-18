@@ -83,6 +83,6 @@ instance ToJSON Compiler where
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")
 
-getBuildConfigs :: Manager -> AuthToken -> Compiler -> IO [BuildConfig]
-getBuildConfigs manager token c =
-  map (BuildConfig c) <$> getReleaseTags manager token (compilerRepo c)
+getBuildConfigs :: Manager -> AuthToken -> Compiler -> ReleaseFilter -> IO [BuildConfig]
+getBuildConfigs manager token c releaseFilter =
+  map (BuildConfig c) <$> getReleaseTags manager token (compilerRepo c) releaseFilter

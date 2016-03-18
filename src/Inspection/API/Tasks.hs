@@ -11,6 +11,8 @@ import Control.Concurrent.Async   (mapConcurrently)
 import Control.Monad.Reader (ask, liftIO)
 
 import qualified Data.Set as Set
+import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
+import Data.Time.Calendar (fromGregorian)
 
 import Data.Acid as Acid
 
@@ -52,6 +54,7 @@ getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeComplete
              (maybe (Config.compilers envConfig) (:[]) mCompiler)
              (maybe (Config.packages envConfig) (:[])
                     ((flip Config.packageLocation envConfig) =<< mPackageName))
+             (Config.releaseFilter envConfig)
   let selectedTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion tasks
   if includeCompleted
     then pure selectedTasks
@@ -59,19 +62,21 @@ getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeComplete
          
   
 
-syncTaskQueue :: Manager -> AuthToken -> [Compiler] -> [GithubLocation] -> IO TaskQueue
-syncTaskQueue manager token compilers githubLocations = do
-  targets <- syncTargets manager token githubLocations
-  buildConfigs <- syncBuildConfigs manager token compilers
+syncTaskQueue :: Manager -> AuthToken -> [Compiler] -> [GithubLocation] -> ReleaseFilter -> IO TaskQueue
+syncTaskQueue manager token compilers githubLocations releaseFilter = do
+  targets <- syncTargets manager token githubLocations releaseFilter
+  buildConfigs <- syncBuildConfigs manager token compilers releaseFilter
   pure $ TaskQueue $ Set.fromList
                        [ Task buildConfig target
                            | target <- targets
                            , buildConfig <- buildConfigs ]
 
-syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> IO [BuildConfig]
-syncBuildConfigs manager token compilers =
-  concat <$> mapConcurrently (getBuildConfigs manager token) compilers
+syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> ReleaseFilter -> IO [BuildConfig]
+syncBuildConfigs manager token compilers releaseFilter =
+  concat <$> mapConcurrently (\c -> getBuildConfigs manager token c releaseFilter) compilers
 
-syncTargets :: Manager -> AuthToken -> [GithubLocation] -> IO [Target]
-syncTargets manager token locations =
-  concat <$> mapConcurrently (\(l@(GithubLocation _ name)) -> map (Target name) <$> getReleaseTags manager token l) locations
+syncTargets :: Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter -> IO [Target]
+syncTargets manager token locations releaseFilter =
+  concat <$> mapConcurrently (\(l@(GithubLocation _ name)) ->
+                                 map (Target name)
+                                   <$> getReleaseTags manager token l releaseFilter) locations
