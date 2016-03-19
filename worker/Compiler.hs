@@ -3,7 +3,9 @@
 -- | Takes care about downloading compiler's binary and running it
 
 module Compiler
-  ( runBuild ) where
+  ( runBuild
+  , getCompiler
+  ) where
 
 import           Control.Monad    (unless, void)
 import           Data.Monoid      ((<>))
@@ -45,12 +47,12 @@ getCompiler tag = do
     unpackCompilerTar tag =<< getCompilerTar tag
   pure (compilerDir tag </> "psc")
 
-runBuild :: ReleaseTag
+runBuild :: FilePath -- ^ Path to the compiler
+         -> ReleaseTag
          -> String -- ^ purescript sources glob
          -> String -- ^ ffi sources glob
          -> IO BuildResult
-runBuild tag sources ffiSources = do
-  psc <- getCompiler tag
+runBuild psc tag sources ffiSources = do
   putStrLn ("  Compiling")
   (exitcode, Text.pack -> _stdout, Text.pack -> stderr) <- readProcessWithExitCode psc args ""
   pure $ case exitcode of

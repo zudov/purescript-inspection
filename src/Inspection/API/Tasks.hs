@@ -9,29 +9,35 @@ module Inspection.API.Tasks
 
 import Control.Concurrent.Async   (mapConcurrently)
 import Control.Monad.Reader (ask, liftIO)
-import Data.List (sort)
 
-import Data.Acid (query, update)
+import qualified Data.Set as Set
+
+import Data.Acid as Acid
+
 import Network.HTTP.Client (Manager)
 import Servant
 
 import qualified Inspection.Config as Config
 import Inspection.TaskQueue
 import Inspection.ReleaseTag
-import Inspection.Database
+
 import Inspection.BuildConfig
 import Inspection.PackageName
-import Inspection.BuildMatrix
+
 import Inspection.Flags
 import Inspection.AuthToken
 import Inspection.API.Types
+import Inspection.Target
+import Inspection.Task
+import Inspection.Database (GetBuildMatrix(..))
+import qualified Inspection.TaskQueue as TaskQueue
 
 type TasksAPI =
   QueryParam "compiler" Compiler
     :> QueryParam "compilerVersion" ReleaseTag
        :> QueryParam "packageName" PackageName
           :> QueryParam "packageVersion" ReleaseTag
-            :> QueryFlag "rebuild"
+            :> QueryFlag "includeCompleted"
                :> Get '[JSON] TaskQueue
 
 tasksServer :: ServerT TasksAPI Inspector
@@ -39,39 +45,36 @@ tasksServer = getQueue
 
 getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
          -> Bool -> Inspector TaskQueue
-getQueue mCompiler mCompilerVersion mPackageName mPackageVersion rebuild = do
+getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeCompleted = do
   Environment{..} <- ask
-  sync mCompiler mPackageName (githubAuthToken envFlags)
-  matrix <- liftIO (query envAcid GetBuildMatrix)
-  pure $ selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion
-       $ allYourTasks rebuild
-       $ matrix
+  tasks <- liftIO $ syncTaskQueue
+             envManager (githubAuthToken envFlags)
+             (maybe (Config.compilers envConfig) (:[]) mCompiler)
+             (maybe (Config.packages envConfig) (:[])
+                    ((flip Config.packageLocation envConfig) =<< mPackageName))
+             (Config.releaseFilter envConfig)
+  let selectedTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion tasks
+  if includeCompleted
+    then pure selectedTasks
+    else TaskQueue.difference selectedTasks . TaskQueue.completedTasks <$> liftIO (query envAcid GetBuildMatrix)
+         
+  
 
-sync :: Maybe Compiler -> Maybe PackageName -> AuthToken -> Inspector ()
-sync mCompiler mPackageName token = do
-  Environment{..} <- ask
-  matrix <- liftIO (query envAcid GetBuildMatrix)
-  packagesSynced <-
-    liftIO (syncPackages
-              envManager
-              token
-              (maybe (Config.packages envConfig) (:[])
-                     (flip Config.packageLocation envConfig =<< mPackageName))
-              matrix)
-  buildConfigsSynced <-
-    liftIO (syncBuildConfigs
-              envManager
-              token
-              (maybe (Config.compilers envConfig) (:[]) mCompiler)
-              packagesSynced)
-  liftIO (update envAcid (AppendBuildMatrix buildConfigsSynced))
+syncTaskQueue :: Manager -> AuthToken -> [Compiler] -> [GithubLocation] -> ReleaseFilter -> IO TaskQueue
+syncTaskQueue manager token compilers githubLocations releaseFilter = do
+  targets <- syncTargets manager token githubLocations releaseFilter
+  buildConfigs <- syncBuildConfigs manager token compilers releaseFilter
+  pure $ TaskQueue $ Set.fromList
+                       [ Task buildConfig target
+                           | target <- targets
+                           , buildConfig <- buildConfigs ]
 
-syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> BuildMatrix -> IO BuildMatrix
-syncBuildConfigs manager token compilers matrix =
-  foldr addBuildConfig matrix . concatMap (take 5 . reverse . sort)
-    <$> mapConcurrently (getBuildConfigs manager token) compilers
+syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> ReleaseFilter -> IO [BuildConfig]
+syncBuildConfigs manager token compilers releaseFilter =
+  concat <$> mapConcurrently (\c -> getBuildConfigs manager token c releaseFilter) compilers
 
-syncPackages :: Manager -> AuthToken -> [GithubLocation] -> BuildMatrix -> IO BuildMatrix
-syncPackages manager token locations matrix =
-  foldr (\(name, tags) m -> foldr (addReleaseTag name) m (take 5 $ reverse $ sort tags)) matrix <$>
-    mapConcurrently (\(l@(GithubLocation _ name)) -> (name,) <$> getReleaseTags manager token l) locations
+syncTargets :: Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter -> IO [Target]
+syncTargets manager token locations releaseFilter =
+  concat <$> mapConcurrently (\(l@(GithubLocation _ name)) ->
+                                 map (Target name)
+                                   <$> getReleaseTags manager token l releaseFilter) locations

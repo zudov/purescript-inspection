@@ -11,8 +11,9 @@ import Inspection.PackageName
 import Inspection.ReleaseTag
 
 data Config
-  = Config { compilers :: [Compiler]
-           , packages  :: [GithubLocation]
+  = Config { compilers     :: [Compiler]
+           , packages      :: [GithubLocation]
+           , releaseFilter :: ReleaseFilter
            }
   deriving (Show, Generic)
 

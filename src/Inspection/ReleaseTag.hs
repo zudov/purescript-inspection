@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -10,6 +12,8 @@ module Inspection.ReleaseTag
   , GithubOwner(..)
   , getReleases
   , getReleaseTags
+  , ReleaseFilter(..)
+  , defaultReleaseFilter
   ) where
 
 
@@ -73,10 +77,12 @@ instance ToJSON ReleaseTag where
 instance FromJSON ReleaseTag where
   parseJSON = fmap ReleaseTag . parseJSON
 
-data GithubLocation = GithubLocation { githubOwner :: GithubOwner
-                                     , githubPackageName :: PackageName
-                                     }
-                    deriving (Show, Eq, Ord, Generic, Typeable, Data)
+data GithubLocation
+  = GithubLocation { githubOwner :: GithubOwner
+                   , githubPackageName :: PackageName
+                   }
+  deriving (Show, Eq, Ord, Generic, Typeable, Data)
+
 newtype GithubOwner = GithubOwner Text
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
@@ -85,9 +91,25 @@ instance FromJSON GithubLocation where
     pure (GithubLocation (GithubOwner owner) (PackageName packageName))
   parseJSON _ = mzero
 
-getReleases :: Manager -> AuthToken -> GithubLocation -> IO [Release]
-getReleases manager token (GithubLocation (GithubOwner owner) (PackageName repo)) =
-  either (error . show) Vector.toList <$>
+data ReleaseFilter
+  = ReleaseFilter { publishedAfter :: Maybe UTCTime }
+  deriving (Show, Eq, Ord, Generic)
+
+instance FromJSON ReleaseFilter where
+  parseJSON = withObject "ReleaseFilter" $ \o ->
+    ReleaseFilter <$> (o .:? "publishedAfter")
+
+defaultReleaseFilter :: ReleaseFilter
+defaultReleaseFilter = ReleaseFilter
+  { publishedAfter = Nothing }
+
+matchReleaseFilter :: ReleaseFilter -> Release -> Bool
+matchReleaseFilter ReleaseFilter{..} Release{..} =
+  maybe True (releasePublishedAt >) publishedAfter
+
+getReleases :: Manager -> AuthToken -> GithubLocation -> ReleaseFilter -> IO [Release]
+getReleases manager token (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilter =
+  either (error . show) (Vector.toList . Vector.filter (matchReleaseFilter releaseFilter)) <$>
     GitHub.executeRequestWithMgr
       manager
       (GitHub.OAuth $ runAuthToken token)
@@ -95,5 +117,6 @@ getReleases manager token (GithubLocation (GithubOwner owner) (PackageName repo)
                          []
                          Nothing)
 
-getReleaseTags :: Manager -> AuthToken -> GithubLocation -> IO [ReleaseTag]
-getReleaseTags manager token location = map releaseTag <$> getReleases manager token location
+getReleaseTags :: Manager -> AuthToken -> GithubLocation -> ReleaseFilter -> IO [ReleaseTag]
+getReleaseTags manager token location releaseFilter =
+  map releaseTag <$> getReleases manager token location releaseFilter

@@ -26,11 +26,6 @@ import Main
 develMain :: IO ()
 develMain = do
   env <- newEnvironment
-  createCheckpoint (envAcid env)
-
-  update (envAcid env) (AppendBuildMatrix
-                         (populatedBuildMatrix $ Config.packageNames
-                                               $ envConfig env))
 
   appRef <- newIORef (app env)
 

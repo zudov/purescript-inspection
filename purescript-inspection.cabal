@@ -18,7 +18,6 @@ library
                        Inspection.API.Types
                        Inspection.API.BuildMatrix
                        Inspection.API.Tasks
-                       Inspection.API.Sync
                        Inspection.BuildConfig
                        Inspection.BuildMatrix
                        Inspection.BuildResult
@@ -31,6 +30,8 @@ library
                        Inspection.TaskQueue
                        Inspection.AuthToken
                        Inspection.Flags
+                       Inspection.EventLog
+                       Inspection.Event
   build-depends:       base >= 4.7 && < 5
                      , containers
                      , servant-server
@@ -56,6 +57,8 @@ library
                      , time
                      , github
                      , vector
+                     , safe
+
   default-language:    Haskell2010
   default-extensions:  DeriveGeneric
                        DeriveDataTypeable
@@ -96,6 +99,7 @@ executable purescript-inspection-worker
                      , either
                      , text
                      , containers
+                     , temporary
 
 test-suite purescript-inspection-test
   type:                exitcode-stdio-1.0

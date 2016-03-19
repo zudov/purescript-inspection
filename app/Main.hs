@@ -38,11 +38,7 @@ main :: IO ()
 main = do
   env <- newEnvironment
   finally
-    (do createCheckpoint (envAcid env)
-        update (envAcid env) (AppendBuildMatrix
-                               (populatedBuildMatrix $ Config.packageNames
-                                                     $ envConfig env))
-        run 8080 (app env))
+    (run 8080 (app env))
     (closeAcidState (envAcid env))
 
 server :: Environment -> Server InspectorAPI
