@@ -17,7 +17,8 @@ import           Data.Time.Clock (getCurrentTime)
 import           Data.Aeson
 import Data.Acid (query, update)
 import Servant
-import Data.Function
+
+import qualified Data.Vector as Vector
 
 import Inspection.API.Types
 import Inspection.BuildConfig
@@ -30,6 +31,7 @@ import Inspection.Event (Event(AddBuildResult))
 import Inspection.EventLog (EventRecord(..), EventId)
 import Inspection.AuthToken
 import Inspection.Config
+import Inspection.GithubM
 
 type BuildMatrixAPI =
        Get '[JSON] BuildMatrix
@@ -79,13 +81,15 @@ addBuildResult (Just authToken) packageName packageVersion compiler compilerVers
     Nothing -> lift $ left $ err404 {errBody = encode $ object
                        [ "errors" .= [ "The package wasn't added to inspection" :: String ]]}
     Just githubLocation -> do
-      packageVersions <- liftIO $ getReleaseTags envManager authToken githubLocation defaultReleaseFilter
-      if packageVersion `notElem` packageVersions
+      Right packageVersions <- runGithubT envManager authToken
+                                 (getReleaseTags githubLocation defaultReleaseFilter)
+      if packageVersion `notElem` Vector.toList packageVersions
         then
           lift $ left $ err404 { errBody = encode $ object
                    [ "errors" .= [ "Unknown package version" :: String ]]}
         else do
-          buildConfigs <- liftIO $ getBuildConfigs envManager authToken compiler defaultReleaseFilter
+          Right buildConfigs <- runGithubT envManager authToken
+                                  (getBuildConfigs compiler defaultReleaseFilter)
           let buildConfig = BuildConfig compiler compilerVersion
           if buildConfig `notElem` buildConfigs
              then

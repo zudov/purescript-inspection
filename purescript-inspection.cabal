@@ -32,33 +32,37 @@ library
                        Inspection.Flags
                        Inspection.EventLog
                        Inspection.Event
-  build-depends:       base >= 4.7 && < 5
-                     , containers
-                     , servant-server
-                     , wai
-                     , warp
-                     , yaml
+                       Inspection.GithubM
+  build-depends:       acid-state
                      , aeson
                      , aeson-extra
-                     , servant
-                     , acid-state
-                     , safecopy
-                     , mtl
-                     , transformers
-                     , network-uri
+                     , async
+                     , base >= 4.7 && < 5
+                     , bytestring
+                     , containers
+                     , either
+                     , github
+                     , hashable >= 1.2.4.0
+                     , haxl
                      , http-client
                      , http-client-tls
                      , lens
                      , lens-aeson
-                     , bytestring
-                     , text
-                     , either
-                     , async
-                     , time
-                     , github
-                     , vector
+                     , mtl
+                     , network-uri
                      , safe
-
+                     , safecopy
+                     , servant
+                     , servant-server
+                     , text
+                     , time
+                     , transformers
+                     , vector
+                     , wai
+                     , warp
+                     , yaml
+                     , operational
+                     
   default-language:    Haskell2010
   default-extensions:  DeriveGeneric
                        DeriveDataTypeable

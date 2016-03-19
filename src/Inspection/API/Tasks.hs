@@ -14,6 +14,8 @@ import qualified Data.Set as Set
 
 import Data.Acid as Acid
 
+import Data.Vector (Vector)
+import qualified Data.Vector as Vector
 import Network.HTTP.Client (Manager)
 import Servant
 
@@ -31,6 +33,7 @@ import Inspection.Target
 import Inspection.Task
 import Inspection.Database (GetBuildMatrix(..))
 import qualified Inspection.TaskQueue as TaskQueue
+import Inspection.GithubM
 
 type TasksAPI =
   QueryParam "compiler" Compiler
@@ -66,15 +69,18 @@ syncTaskQueue manager token compilers githubLocations releaseFilter = do
   buildConfigs <- syncBuildConfigs manager token compilers releaseFilter
   pure $ TaskQueue $ Set.fromList
                        [ Task buildConfig target
-                           | target <- targets
-                           , buildConfig <- buildConfigs ]
+                           | target <- Vector.toList targets
+                           , buildConfig <- Vector.toList buildConfigs ]
 
-syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> ReleaseFilter -> IO [BuildConfig]
+syncBuildConfigs :: Manager -> AuthToken -> [Compiler] -> ReleaseFilter -> IO (Vector BuildConfig)
 syncBuildConfigs manager token compilers releaseFilter =
-  concat <$> mapConcurrently (\c -> getBuildConfigs manager token c releaseFilter) compilers
+  foldMap (either (const mempty) id)
+    <$> mapConcurrently (\c -> runGithubM manager token $ getBuildConfigs c releaseFilter) compilers
 
-syncTargets :: Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter -> IO [Target]
+syncTargets :: Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter -> IO (Vector Target)
 syncTargets manager token locations releaseFilter =
-  concat <$> mapConcurrently (\(l@(GithubLocation _ name)) ->
-                                 map (Target name)
-                                   <$> getReleaseTags manager token l releaseFilter) locations
+  foldMap (either (const mempty) id)
+    <$> mapConcurrently (\(l@(GithubLocation _ name)) ->
+                                 fmap (fmap (Target name))
+                                   <$> runGithubM manager token (getReleaseTags l releaseFilter))
+                        locations

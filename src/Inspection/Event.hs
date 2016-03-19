@@ -12,5 +12,3 @@ data Event
   = AddBuildResult PackageName ReleaseTag BuildConfig BuildResult
   deriving (Show, Eq)
 deriveSafeCopy 0 'base ''Event
-
-

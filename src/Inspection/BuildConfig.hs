@@ -9,6 +9,7 @@ import           Control.Monad
 import           Data.Data     (Data ())
 import           Data.Map      (Map)
 import           Data.Monoid
+import           Data.Vector   (Vector)
 import qualified Data.Text     as Text
 import           Data.Typeable (Typeable ())
 import           GHC.Generics  (Generic ())
@@ -22,6 +23,7 @@ import Servant.Common.Text (FromText (..), ToText (..))
 import Inspection.PackageName
 import Inspection.AuthToken
 import Inspection.ReleaseTag
+import Inspection.GithubM
 
 data BuildConfig
   = BuildConfig { buildConfigCompiler        :: Compiler
@@ -83,6 +85,6 @@ instance ToJSON Compiler where
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")
 
-getBuildConfigs :: Manager -> AuthToken -> Compiler -> ReleaseFilter -> IO [BuildConfig]
-getBuildConfigs manager token c releaseFilter =
-  map (BuildConfig c) <$> getReleaseTags manager token (compilerRepo c) releaseFilter
+getBuildConfigs :: (Monad m) => Compiler -> ReleaseFilter -> GithubT m (Vector BuildConfig)
+getBuildConfigs c releaseFilter =
+  fmap (BuildConfig c) <$> getReleaseTags (compilerRepo c) releaseFilter

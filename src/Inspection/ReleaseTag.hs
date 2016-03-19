@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
@@ -21,6 +20,7 @@ import           Control.Monad      (mzero)
 import           Data.Data          (Data ())
 
 import           Data.Map           (Map)
+import           Data.Vector        (Vector)
 import qualified Data.Vector        as Vector
 
 import           Data.Text          (Text)
@@ -33,15 +33,16 @@ import           GHC.Generics       (Generic ())
 import           Data.Aeson.Extra
 
 import           Data.SafeCopy       (base, deriveSafeCopy)
-import           Network.HTTP.Client (Manager)
+
 
 
 import           Servant.Common.Text (FromText (..), ToText (..))
 
-import qualified GitHub
+import qualified GitHub as GH
 
-import Inspection.AuthToken
+
 import Inspection.PackageName
+import Inspection.GithubM
 
 data Release = Release { releaseTag         :: ReleaseTag
                        , releasePublishedAt :: UTCTime
@@ -86,6 +87,9 @@ data GithubLocation
 newtype GithubOwner = GithubOwner Text
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
+anonymous :: GithubOwner
+anonymous = GithubOwner "anonymous"
+
 instance FromJSON GithubLocation where
   parseJSON (String (Text.splitOn "/" -> [owner, packageName])) =
     pure (GithubLocation (GithubOwner owner) (PackageName packageName))
@@ -107,16 +111,14 @@ matchReleaseFilter :: ReleaseFilter -> Release -> Bool
 matchReleaseFilter ReleaseFilter{..} Release{..} =
   maybe True (releasePublishedAt >) publishedAfter
 
-getReleases :: Manager -> AuthToken -> GithubLocation -> ReleaseFilter -> IO [Release]
-getReleases manager token (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilter =
-  either (error . show) (Vector.toList . Vector.filter (matchReleaseFilter releaseFilter)) <$>
-    GitHub.executeRequestWithMgr
-      manager
-      (GitHub.OAuth $ runAuthToken token)
-      (GitHub.PagedQuery ["repos", Text.unpack owner, Text.unpack repo, "releases"]
-                         []
-                         Nothing)
+getReleases :: (Monad m) => GithubLocation -> ReleaseFilter -> GithubT m (Vector Release)
+getReleases (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilter =
+  Vector.filter (matchReleaseFilter releaseFilter) <$>
+    githubRequest
+      (GH.PagedQuery ["repos", Text.unpack owner, Text.unpack repo, "releases"]
+                     []
+                     Nothing)
 
-getReleaseTags :: Manager -> AuthToken -> GithubLocation -> ReleaseFilter -> IO [ReleaseTag]
-getReleaseTags manager token location releaseFilter =
-  map releaseTag <$> getReleases manager token location releaseFilter
+getReleaseTags :: (Monad m) => GithubLocation -> ReleaseFilter -> GithubT m (Vector ReleaseTag)
+getReleaseTags location releaseFilter =
+  fmap releaseTag <$> getReleases location releaseFilter
