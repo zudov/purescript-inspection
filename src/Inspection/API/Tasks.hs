@@ -11,8 +11,6 @@ import Control.Concurrent.Async   (mapConcurrently)
 import Control.Monad.Reader (ask, liftIO)
 
 import qualified Data.Set as Set
-import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
-import Data.Time.Calendar (fromGregorian)
 
 import Data.Acid as Acid
 

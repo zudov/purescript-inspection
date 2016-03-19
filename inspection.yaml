@@ -56,4 +56,4 @@ packages:
   - "purescript/purescript-bifunctors"
 
 releaseFilter:
-  publishedAfter: "2016-01-01T00:00:00Z"
+  publishedAfter: "2015-10-01T00:00:00Z"

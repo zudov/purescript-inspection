@@ -99,6 +99,7 @@ executable purescript-inspection-worker
                      , either
                      , text
                      , containers
+                     , temporary
 
 test-suite purescript-inspection-test
   type:                exitcode-stdio-1.0
