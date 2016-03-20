@@ -41,27 +41,32 @@ library
                      , bytestring
                      , containers
                      , either
+                     , errors >= 2.1.2
+                     , exceptions >= 0.8.2.1
                      , github
                      , hashable >= 1.2.4.0
                      , haxl
                      , http-client
                      , http-client-tls
+                     , http-types >= 0.9
                      , lens
                      , lens-aeson
                      , mtl
                      , network-uri
+                     , operational
                      , safe
                      , safecopy
                      , servant
                      , servant-server
+                     , stm
                      , text
                      , time
                      , transformers
+                     , unordered-containers >= 0.2.5.1
                      , vector
                      , wai
                      , warp
                      , yaml
-                     , operational
                      
   default-language:    Haskell2010
   default-extensions:  DeriveGeneric
@@ -73,17 +78,19 @@ executable purescript-inspection-exe
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  build-depends:       base
-                     , purescript-inspection
-                     , servant-server
-                     , acid-state
-                     , wai
-                     , wai-extra
-                     , wai-cors
-                     , warp
+  build-depends:       acid-state
+                     , base
+                     , errors >= 2.1.2
+                     , exceptions >= 0.8.2.1
+                     , foreign-store
                      , http-client
                      , http-client-tls
-                     , foreign-store
+                     , purescript-inspection
+                     , servant-server
+                     , wai
+                     , wai-cors
+                     , wai-extra
+                     , warp
   default-language:    Haskell2010
 
 executable purescript-inspection-worker

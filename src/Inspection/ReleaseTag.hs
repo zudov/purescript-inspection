@@ -111,7 +111,7 @@ matchReleaseFilter :: ReleaseFilter -> Release -> Bool
 matchReleaseFilter ReleaseFilter{..} Release{..} =
   maybe True (releasePublishedAt >) publishedAfter
 
-getReleases :: (Monad m) => GithubLocation -> ReleaseFilter -> GithubT m (Vector Release)
+getReleases :: GithubLocation -> ReleaseFilter -> GithubM (Vector Release)
 getReleases (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilter =
   Vector.filter (matchReleaseFilter releaseFilter) <$>
     githubRequest
@@ -119,6 +119,6 @@ getReleases (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilte
                      []
                      Nothing)
 
-getReleaseTags :: (Monad m) => GithubLocation -> ReleaseFilter -> GithubT m (Vector ReleaseTag)
+getReleaseTags :: GithubLocation -> ReleaseFilter -> GithubM (Vector ReleaseTag)
 getReleaseTags location releaseFilter =
   fmap releaseTag <$> getReleases location releaseFilter

@@ -17,11 +17,11 @@ import           GHC.Generics  (Generic ())
 import Data.Aeson.Extra
 import Data.Aeson.Types    (Options (..), defaultOptions)
 import Data.SafeCopy       (base, deriveSafeCopy)
-import Network.HTTP.Client (Manager)
+
 import Servant.Common.Text (FromText (..), ToText (..))
 
 import Inspection.PackageName
-import Inspection.AuthToken
+
 import Inspection.ReleaseTag
 import Inspection.GithubM
 
@@ -85,6 +85,6 @@ instance ToJSON Compiler where
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")
 
-getBuildConfigs :: (Monad m) => Compiler -> ReleaseFilter -> GithubT m (Vector BuildConfig)
+getBuildConfigs :: Compiler -> ReleaseFilter -> GithubM (Vector BuildConfig)
 getBuildConfigs c releaseFilter =
   fmap (BuildConfig c) <$> getReleaseTags (compilerRepo c) releaseFilter

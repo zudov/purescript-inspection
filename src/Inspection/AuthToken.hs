@@ -4,14 +4,18 @@ module Inspection.AuthToken
   ) where
 
 
+import Data.Hashable (Hashable)
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Data.ByteString (ByteString)
+import GHC.Generics
 
 
 import Servant.Common.Text
 
-newtype AuthToken = AuthToken { runAuthToken :: ByteString } deriving (Show, Eq)
+newtype AuthToken = AuthToken { runAuthToken :: ByteString } deriving (Show, Eq, Generic)
+
+instance Hashable AuthToken
 
 instance FromText AuthToken where
   fromText t = case Text.words t of

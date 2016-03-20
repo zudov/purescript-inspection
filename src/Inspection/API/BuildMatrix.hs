@@ -11,6 +11,7 @@ module Inspection.API.BuildMatrix
 
 import           Control.Monad.Reader (ask, asks, lift, liftIO)
 import           Control.Monad.Trans.Either
+import           Control.Monad.Except
 import           Data.Map                   (Map ())
 import qualified Data.Map                   as Map
 import           Data.Time.Clock (getCurrentTime)
@@ -68,32 +69,34 @@ getPackageReleases packageName = do
   BuildMatrix matrix <- liftIO (query acid GetBuildMatrix)
   case Map.lookup packageName matrix of
     Just a  -> pure a
-    Nothing -> lift (left err404)
+    Nothing -> throwError err404
 
 addBuildResult :: Maybe AuthToken -> PackageName -> ReleaseTag -> Compiler -> ReleaseTag -> BuildResult
                -> Inspector EventId
 addBuildResult Nothing _ _ _ _ _ =
-  lift $ left err401 { errBody = encode $ object
+  throwError err401 { errBody = encode $ object
                         ["errors" .= [ "Authorization token missing" :: String ]] }
 addBuildResult (Just authToken) packageName packageVersion compiler compilerVersion result = do
   Environment{..} <- ask
   case packageLocation packageName envConfig of
-    Nothing -> lift $ left $ err404 {errBody = encode $ object
+    Nothing -> throwError $ err404 {errBody = encode $ object
                        [ "errors" .= [ "The package wasn't added to inspection" :: String ]]}
     Just githubLocation -> do
-      Right packageVersions <- runGithubT envManager authToken
-                                 (getReleaseTags githubLocation defaultReleaseFilter)
+      packageVersions <- lift $ withExceptT githubError
+                              $ runGithubM envGithubCacheRef envManager authToken
+                           (getReleaseTags githubLocation defaultReleaseFilter)
       if packageVersion `notElem` Vector.toList packageVersions
         then
-          lift $ left $ err404 { errBody = encode $ object
+          throwError $ err404 { errBody = encode $ object
                    [ "errors" .= [ "Unknown package version" :: String ]]}
         else do
-          Right buildConfigs <- runGithubT envManager authToken
-                                  (getBuildConfigs compiler defaultReleaseFilter)
+          buildConfigs <- lift $ withExceptT githubError
+                               $ runGithubM envGithubCacheRef envManager authToken
+                            (getBuildConfigs compiler defaultReleaseFilter)
           let buildConfig = BuildConfig compiler compilerVersion
           if buildConfig `notElem` buildConfigs
              then
-               lift $ left $ err404 { errBody = encode $ object
+               throwError $ err404 { errBody = encode $ object
                         [ "errors" .= [ "Unknown compiler version" :: String ]]}
              else do
               let event = AddBuildResult packageName packageVersion buildConfig result

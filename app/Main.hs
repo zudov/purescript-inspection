@@ -9,6 +9,7 @@ import Data.Monoid       ((<>))
 
 import Data.Acid                            (closeAcidState, createCheckpoint,
                                              openLocalState, update)
+import Data.IORef
 import Network.HTTP.Client                  (newManager)
 import Network.HTTP.Client.TLS              (tlsManagerSettings)
 import Network.Wai                          (Application)
@@ -21,17 +22,18 @@ import Servant
 
 import           Inspection.API
 import           Inspection.API.Types
-import           Inspection.BuildMatrix
+
 import qualified Inspection.Config      as Config
 import           Inspection.Database
 import           Inspection.Flags
-
+import           Inspection.GithubM
 newEnvironment :: IO Environment
 newEnvironment = do
   envFlags   <- getEnvironmentFlags
   envConfig  <- Config.getConfig "inspection.yaml"
   envManager <- newManager tlsManagerSettings
   envAcid    <- openLocalState initialDB
+  envGithubCacheRef <- newIORef (GithubCache mempty)
   pure Environment{..}
 
 main :: IO ()
@@ -46,8 +48,8 @@ server env = enter (inspectorToEither env) inspectorServer
 
 app :: Environment -> Application
 app env = logStdoutDev $ cors (const (Just corsPolicy))
-                       $ serve (Proxy :: Proxy (InspectorAPI :<|> Raw))
-                               (server env :<|> serveDirectory "frontend/dist/")
+                       $ serve (Proxy :: Proxy InspectorAPI)
+                               (server env)
   where
     corsPolicy = simpleCorsResourcePolicy
                   { corsMethods        = simpleMethods <> ["DELETE", "PUT", "PATCH"]
