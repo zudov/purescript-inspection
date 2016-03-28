@@ -1,53 +1,72 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Inspection.BuildMatrix where
 
-import           Data.Map      (Map)
-import qualified Data.Map      as Map
+import Prelude ()
+import MyLittlePrelude
+
+import Data.SafeCopy ( base, deriveSafeCopy )
+
+import Inspection.Event (Event(..))
+import Inspection.EventLog (EventLog)
 import qualified Data.Set      as Set
-import           Data.Typeable (Typeable)
-import           GHC.Generics  (Generic)
-import Data.Maybe (fromMaybe)
+
 
 import Data.Aeson.Extra
-import Data.SafeCopy           (base, deriveSafeCopy)
+import Data.IxSet.Typed as IxSet
 
-import Inspection.BuildConfig
-import Inspection.BuildResult
-import Inspection.PackageName
-import Inspection.ReleaseTag
-import Inspection.Event
-import Inspection.EventLog
+import Inspection.Data
 
-data BuildMatrix
-  = BuildMatrix (Map PackageName -- ^ Packages
-                     (Map ReleaseTag -- ^ Package versions
-                          (Map BuildConfig -- ^ Compiler versions
-                               [BuildResult])))
+data Entry
+  = Entry
+      { entryTarget      :: Target
+      , entryBuildConfig :: BuildConfig
+      , entryBuildResult :: BuildResult
+      }
+  deriving (Show, Eq, Ord, Generic, Data, Typeable)
+
+instance ToJSON Entry where
+  toJSON Entry{..} = object
+    [ "packageName"     .= targetPackageName entryTarget
+    , "packageVersion"  .= targetReleaseTag entryTarget
+    , "compiler"        .= buildConfigCompiler entryBuildConfig
+    , "compilerVersion" .= buildConfigCompilerRelease entryBuildConfig
+    , "buildResult"     .= entryBuildResult
+    ]
+
+type EntryIxs = '[PackageName, ReleaseTag Package, Compiler, ReleaseTag Compiler]
+
+instance Indexable EntryIxs Entry where
+  indices = ixList
+              (ixFun ((:[]) . targetPackageName . entryTarget))
+              (ixFun ((:[]) . targetReleaseTag . entryTarget))
+              (ixFun ((:[]) . buildConfigCompiler . entryBuildConfig))
+              (ixFun ((:[]) . buildConfigCompilerRelease . entryBuildConfig))
+              
+newtype BuildMatrix = BuildMatrix (IxSet EntryIxs Entry)
   deriving (Show, Eq, Generic, Typeable)
 
+deriveSafeCopy 0 'base ''Entry
 deriveSafeCopy 0 'base ''BuildMatrix
 
 instance ToJSON BuildMatrix where
-  toJSON (BuildMatrix matrix) = toJSON $ M matrix
+  toJSON (BuildMatrix matrix) = toJSON $ IxSet.toSet matrix
 
 instance Monoid BuildMatrix where
   mempty = BuildMatrix mempty
-  mappend (BuildMatrix a) (BuildMatrix b) =
-    BuildMatrix (Map.unionWith (Map.unionWith (Map.unionWith (++))) a b)
+  mappend (BuildMatrix a) (BuildMatrix b) = BuildMatrix (mappend a b)
 
 execute :: Event -> BuildMatrix -> BuildMatrix
-execute event@(AddBuildResult packageName releaseTag buildConfig buildResult) (BuildMatrix buildMatrix) =
-    BuildMatrix $ Map.alter alterAtPackageName packageName buildMatrix
-  where
-    alterAtPackageName :: (v ~ Maybe (Map ReleaseTag (Map BuildConfig [BuildResult]))) => v -> v
-    alterAtPackageName = Just . Map.alter alterAtReleaseTag releaseTag . fromMaybe mempty
-
-    alterAtReleaseTag :: (v ~ Maybe (Map BuildConfig [BuildResult])) => v -> v
-    alterAtReleaseTag = Just . Map.alter alterAtBuildConfig buildConfig . fromMaybe mempty
-
-    alterAtBuildConfig :: (v ~ Maybe [BuildResult]) => v -> v
-    alterAtBuildConfig = Just . (buildResult:) . fromMaybe []
+execute (AddBuildResult packageName releaseTag buildConfig buildResult) (BuildMatrix buildMatrix) =
+    BuildMatrix $
+      IxSet.insert
+        (Entry (Target packageName releaseTag) buildConfig buildResult)
+        buildMatrix
 
 restore :: EventLog Event -> BuildMatrix
 restore eventLog = restore' eventLog mempty
@@ -55,22 +74,22 @@ restore eventLog = restore' eventLog mempty
 restore' :: EventLog Event -> BuildMatrix -> BuildMatrix
 restore' eventLog matrix = foldl (flip execute) matrix eventLog
 
-packages :: BuildMatrix -> [PackageName]
-packages (BuildMatrix matrix) = Map.keys matrix
+packages :: BuildMatrix -> Set PackageName
+packages (BuildMatrix matrix) = Set.map (targetPackageName . entryTarget) $ IxSet.toSet matrix
 
-compilers :: BuildMatrix -> [Compiler]
+compilers :: BuildMatrix -> Set Compiler
 compilers (BuildMatrix matrix) =
-  foldMap (foldMap (map buildConfigCompiler . Map.keys)) matrix
+  Set.map (buildConfigCompiler . entryBuildConfig) $ IxSet.toSet matrix
 
-addReleaseTag :: PackageName -> ReleaseTag -> BuildMatrix -> BuildMatrix
-addReleaseTag packageName releaseTag (BuildMatrix matrix) =
-  BuildMatrix (Map.adjust (Map.insertWith Map.union releaseTag
-                                         (Map.fromSet (const []) buildConfigs))
-                           packageName matrix)
-  where
-    buildConfigs :: Set.Set BuildConfig
-    buildConfigs = foldMap Map.keysSet (Map.elems =<< Map.elems matrix)
-
-addBuildConfig :: BuildConfig -> BuildMatrix -> BuildMatrix
-addBuildConfig buildConfig (BuildMatrix matrix) =
-  BuildMatrix (fmap (fmap (Map.insertWith (++) buildConfig [])) matrix)
+entries :: Maybe Compiler
+        -> Maybe (ReleaseTag Compiler)
+        -> Maybe PackageName
+        -> Maybe (ReleaseTag Package)
+        -> BuildMatrix -> Set Entry
+entries mCompiler mCompilerVersion mPackageName mPackageVersion (BuildMatrix matrix) =
+  IxSet.toSet
+    $ maybe id IxSet.getEQ mPackageName
+    $ maybe id IxSet.getEQ mPackageVersion
+    $ maybe id IxSet.getEQ mCompiler
+    $ maybe id IxSet.getEQ mCompilerVersion
+    $ matrix

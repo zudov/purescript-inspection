@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE ViewPatterns      #-}
-module Inspection.BuildConfig where
+module Inspection.Data.BuildConfig where
 
 import           Control.Monad
 import           Data.Data     (Data ())
@@ -20,14 +20,14 @@ import Data.SafeCopy       (base, deriveSafeCopy)
 
 import Servant.Common.Text (FromText (..), ToText (..))
 
-import Inspection.PackageName
+import Inspection.Data.PackageName
+import Inspection.Data.ReleaseTag
 
-import Inspection.ReleaseTag
 import Inspection.GithubM
 
 data BuildConfig
   = BuildConfig { buildConfigCompiler        :: Compiler
-                , buildConfigCompilerRelease :: ReleaseTag
+                , buildConfigCompilerRelease :: ReleaseTag Compiler
                 }
   deriving (Show, Eq, Ord, Generic, Typeable, Data)
 

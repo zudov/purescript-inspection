@@ -23,15 +23,18 @@ import Inspection.Database
 import Inspection.Flags
 import Inspection.Config
 import Inspection.GithubM
-import GitHub as GH
+import qualified GitHub as GH
+import qualified Inspection.BuildLogStorage as BuildLogStorage
 
 data Environment
-  = Environment { envAcid    :: AcidState DB
-                , envManager :: Manager
-                , envFlags   :: Flags
-                , envConfig  :: Config
-                , envGithubCacheRef :: IORef GithubCache
-                }
+  = Environment
+      { envAcid    :: AcidState DB
+      , envManager :: Manager
+      , envFlags   :: Flags
+      , envConfig  :: Config
+      , envGithubCacheRef :: IORef GithubCache
+      , envBuildLogStorageEnv :: BuildLogStorage.Environment 
+      }
 
 type Inspector = ReaderT Environment (ExceptT ServantErr IO)
 

@@ -2,20 +2,20 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 module Inspection.API.Tasks
   ( TasksAPI
   , tasksServer
   ) where
 
-
-import Control.Monad.Reader (ask, liftIO)
+import Prelude()
+import MyLittlePrelude
 
 import qualified Data.Set as Set
 
 import Data.Acid as Acid
 
 import Data.IORef
-import Data.Vector (Vector)
 import qualified Data.Vector as Vector
 import Network.HTTP.Client (Manager)
 import Servant
@@ -24,34 +24,33 @@ import Control.Monad.Except
 import GitHub as GH
 
 import qualified Inspection.Config as Config
-import Inspection.TaskQueue
-import Inspection.ReleaseTag
 
-import Inspection.BuildConfig
-import Inspection.PackageName
-
+import Inspection.Data
+import Inspection.Data.TaskQueue as TaskQueue
+import Inspection.Data.BuildConfig (getBuildConfigs)
+import Inspection.Data.ReleaseTag (getReleaseTags)
 import Inspection.Flags
-import Inspection.AuthToken
+import Inspection.Data.AuthToken
 import Inspection.API.Types
-import Inspection.Target
-import Inspection.Task
 import Inspection.Database (GetBuildMatrix(..))
-import qualified Inspection.TaskQueue as TaskQueue
 import Inspection.GithubM
 
 type TasksAPI =
   QueryParam "compiler" Compiler
-    :> QueryParam "compilerVersion" ReleaseTag
+    :> QueryParam "compilerVersion" (ReleaseTag Compiler)
        :> QueryParam "packageName" PackageName
-          :> QueryParam "packageVersion" ReleaseTag
+          :> QueryParam "packageVersion" (ReleaseTag Package)
             :> QueryFlag "includeCompleted"
                :> Get '[JSON] TaskQueue
 
 tasksServer :: ServerT TasksAPI Inspector
 tasksServer = getQueue
 
-getQueue :: Maybe Compiler -> Maybe ReleaseTag -> Maybe PackageName -> Maybe ReleaseTag
-         -> Bool -> Inspector TaskQueue
+getQueue
+  :: Maybe Compiler -> Maybe (ReleaseTag Compiler)
+  -> Maybe PackageName -> Maybe (ReleaseTag Package)
+  -> Bool
+  -> Inspector TaskQueue
 getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeCompleted = do
   Environment{..} <- ask
   tasks <- lift $ withExceptT githubError $ syncTaskQueue
@@ -82,15 +81,15 @@ syncTaskQueue cacheRef manager token compilers githubLocations releaseFilter = d
 syncBuildConfigs
   :: IORef GithubCache -> Manager -> AuthToken -> [Compiler] -> ReleaseFilter
   -> ExceptT GH.Error IO (Vector BuildConfig)
-syncBuildConfigs cacheRef manager token compilers releaseFilter =
-  mconcat <$> mapM ((\c -> runGithubM cacheRef manager token $ getBuildConfigs c releaseFilter)) compilers
+syncBuildConfigs cacheRef manager (toGithubAuth -> auth) compilers releaseFilter =
+  mconcat <$> mapM ((\c -> runGithubM cacheRef manager auth $ getBuildConfigs c releaseFilter)) compilers
 
 syncTargets
   :: IORef GithubCache -> Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter
   -> ExceptT GH.Error IO (Vector Target)
-syncTargets cacheRef manager token locations releaseFilter =
+syncTargets cacheRef manager (toGithubAuth -> auth) locations releaseFilter =
   mconcat <$> mapM (\(l@(GithubLocation _ name)) ->
                         fmap (fmap (Target name))
-                          $ runGithubM cacheRef manager token
+                          $ runGithubM cacheRef manager auth
                           $ getReleaseTags l releaseFilter)
                     locations

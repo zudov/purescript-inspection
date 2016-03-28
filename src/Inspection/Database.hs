@@ -8,20 +8,16 @@ module Inspection.Database
   , AddEventRecord(..)
   ) where
 
-import           Control.Monad.Reader (asks)
-import           Control.Monad.State  (modify, state)
+import Prelude ()
+import MyLittlePrelude
 
-
-import           Data.Typeable        (Typeable)
-import           GHC.Generics         (Generic)
+import Control.Monad.Reader.Class (asks)
+import Control.Monad.State.Class  (state)
 
 import Data.Acid     (Query, Update, makeAcidic)
 import Data.SafeCopy (base, deriveSafeCopy)
 
-
 import Inspection.BuildMatrix
-
-
 
 import Inspection.Event (Event)
 import Inspection.EventLog (EventLog, EventRecord(..), EventId(..))

@@ -1,23 +1,22 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Inspection.Task where
+module Inspection.Data.Task where
 
-import Data.Data     (Data ())
-import Data.Typeable (Typeable ())
-import GHC.Generics  (Generic ())
+import Prelude ()
+import MyLittlePrelude
 
 import Data.Aeson.Extra (ToJSON (..), genericToJSON, FromJSON(..), genericParseJSON)
 import Data.Aeson.Types (Options (..), defaultOptions)
 import Data.SafeCopy    (base, deriveSafeCopy)
 
-import Inspection.BuildConfig
-import Inspection.Target
+import Inspection.Data.BuildConfig
+import Inspection.Data.Target
 
 newtype TaskId = TaskId Int deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
 data Task = Task { taskBuildConfig :: BuildConfig
                  , taskTarget      :: Target
                  }
-          deriving (Show, Eq, Ord, Generic, Typeable)
+          deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
 instance ToJSON Task where
   toJSON = genericToJSON defaultOptions { fieldLabelModifier = modifier }

@@ -7,7 +7,7 @@ import qualified Data.ByteString.Char8 as ByteString.Char8
 
 import System.Environment (getEnv)
 
-import Inspection.AuthToken
+import Inspection.Data.AuthToken
 
 data Flags = Flags { githubAuthToken :: AuthToken
                    }

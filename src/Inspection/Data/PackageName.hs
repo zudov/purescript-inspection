@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell   #-}
-module Inspection.PackageName
+module Inspection.Data.PackageName
   ( PackageName(..)
   ) where
 

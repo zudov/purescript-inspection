@@ -19,22 +19,19 @@ import           System.Exit                (ExitCode (..))
 
 import Servant.Common.Text (ToText(..), FromText(..))
 
-import Inspection.BuildConfig
-import Inspection.BuildResult
-import Inspection.PackageName
-import Inspection.ReleaseTag
-import Inspection.Target
-import Inspection.Task
-import Inspection.TaskQueue
+import Inspection.Data
+import Inspection.Data.TaskQueue
+import Inspection.API.BuildMatrix
+import qualified Inspection.BuildLogStorage as BuildLogStorage
 
 import Bower
 import Client
 import Compiler
 
 data Query = Query { qCompiler        :: Maybe Compiler
-                   , qCompilerVersion :: Maybe ReleaseTag
+                   , qCompilerVersion :: Maybe (ReleaseTag Compiler)
                    , qPackage         :: Maybe PackageName
-                   , qPackageVersion  :: Maybe ReleaseTag
+                   , qPackageVersion  :: Maybe (ReleaseTag Package)
                    }
            deriving (Show)
 
@@ -53,7 +50,7 @@ lookupFlag name = (fromText . Text.pack =<<) <$> lookupEnv name
 main :: IO ()
 main = do
   Query{..} <- getQuery
-  authToken <- lookupFlag "AUTH_TOKEN"  
+  authToken <- lookupFlag "AUTH_TOKEN"
   Right (TaskQueue tasks) <- runEitherT $ getTasks qCompiler qCompilerVersion
                                                    qPackage qPackageVersion False
   putStrLn ("Got " <> show (length tasks) <> " tasks.")
@@ -75,10 +72,15 @@ main = do
       case bowerExitCode of
         ExitFailure _code -> do
           putStrLn "  Reporting: bower failure"
-          runEitherT $ addBuildResult authToken packageName packageVersion compiler compilerVersion (Failure "")
+          runEitherT $
+            addBuildResult
+              authToken
+              packageName packageVersion
+              compiler compilerVersion
+              (AddBuildResultBody Failure mempty)
         ExitSuccess -> do
-          buildResult <- runBuild (dir </> psc) compilerVersion "bower_components/purescript-*/src/**/*.purs"
+          buildResultBody <- runBuild (dir </> psc) compilerVersion "bower_components/purescript-*/src/**/*.purs"
                                                                 "bower_components/purescript-*/src/**/*.js"
-          putStrLn ("  Reporting: " <> show buildResult)
-          runEitherT $ addBuildResult authToken packageName packageVersion compiler compilerVersion buildResult
+          putStrLn ("  Reporting: " <> show (buildResult buildResultBody))
+          runEitherT $ addBuildResult authToken packageName packageVersion compiler compilerVersion buildResultBody
       setCurrentDirectory dir

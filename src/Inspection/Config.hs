@@ -1,14 +1,12 @@
 module Inspection.Config where
 
-import Data.List    (find)
+import Data.List (find)
 import GHC.Generics (Generic ())
 
 import Data.Aeson.Extra
-import Data.Yaml        (decodeFileEither)
+import Data.Yaml (decodeFileEither)
 
-import Inspection.BuildConfig
-import Inspection.PackageName
-import Inspection.ReleaseTag
+import Inspection.Data
 
 data Config
   = Config { compilers     :: [Compiler]

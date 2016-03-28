@@ -4,11 +4,12 @@
 {-# LANGUAGE TypeOperators #-}
 module Main where
 
-import Control.Exception (finally)
-import Data.Monoid       ((<>))
+import Prelude ()
+import MyLittlePrelude
 
-import Data.Acid                            (closeAcidState, createCheckpoint,
-                                             openLocalState, update)
+import Control.Exception (finally)
+
+import Data.Acid                            (closeAcidState, openLocalState)
 import Data.IORef
 import Network.HTTP.Client                  (newManager)
 import Network.HTTP.Client.TLS              (tlsManagerSettings)
@@ -18,7 +19,7 @@ import Network.Wai.Middleware.Cors          (CorsResourcePolicy (..), cors,
                                              simpleCorsResourcePolicy,
                                              simpleHeaders, simpleMethods)
 import Network.Wai.Middleware.RequestLogger (logStdoutDev)
-import Servant
+import Servant                              (Server, enter, serve)
 
 import           Inspection.API
 import           Inspection.API.Types
@@ -27,6 +28,8 @@ import qualified Inspection.Config      as Config
 import           Inspection.Database
 import           Inspection.Flags
 import           Inspection.GithubM
+import qualified Inspection.BuildLogStorage as BuildLogStorage
+
 newEnvironment :: IO Environment
 newEnvironment = do
   envFlags   <- getEnvironmentFlags
@@ -34,6 +37,8 @@ newEnvironment = do
   envManager <- newManager tlsManagerSettings
   envAcid    <- openLocalState initialDB
   envGithubCacheRef <- newIORef (GithubCache mempty)
+  envBuildLogStorageEnv <- BuildLogStorage.Environment envManager
+                             <$> BuildLogStorage.loadConfig
   pure Environment{..}
 
 main :: IO ()

@@ -4,78 +4,76 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
-module Inspection.ReleaseTag
+module Inspection.Data.ReleaseTag
   ( ReleaseTag(..)
+  , mkReleaseTag
   , Release(..)
   , GithubLocation(..)
   , GithubOwner(..)
+  , anonymous
   , getReleases
   , getReleaseTags
   , ReleaseFilter(..)
   , defaultReleaseFilter
   ) where
 
+import Prelude ()
+import MyLittlePrelude
 
-import           Control.Monad      (mzero)
-import           Data.Data          (Data ())
-
-import           Data.Map           (Map)
-import           Data.Vector        (Vector)
 import qualified Data.Vector        as Vector
-
-import           Data.Text          (Text)
 import qualified Data.Text          as Text
 
-import           Data.Time.Clock    (UTCTime)
-import           Data.Typeable      (Typeable ())
-import           GHC.Generics       (Generic ())
-
 import           Data.Aeson.Extra
+import           Data.SafeCopy       (SafeCopy(..), contain, safePut, safeGet)
 
-import           Data.SafeCopy       (base, deriveSafeCopy)
-
-
-
-import           Servant.Common.Text (FromText (..), ToText (..))
+import           Servant.Common.Text (FromText (..))
 
 import qualified GitHub as GH
 
 
-import Inspection.PackageName
+import Inspection.Data.PackageName
 import Inspection.GithubM
 
-data Release = Release { releaseTag         :: ReleaseTag
-                       , releasePublishedAt :: UTCTime
-                       }
-             deriving (Show, Eq, Ord)
+data Release entity
+  = Release
+      { releaseTag         :: ReleaseTag entity
+      , releasePublishedAt :: UTCTime
+      }
+  deriving (Show, Eq, Ord)
 
-instance FromJSON Release where
+instance FromJSON (Release entity) where
   parseJSON (Object o) = Release <$> (ReleaseTag <$> o .: "tag_name")
                                  <*> (o .: "published_at")
   parseJSON _ = mzero
 
 -- | Release tags as they appear in Github's releases
-newtype ReleaseTag = ReleaseTag { runReleaseTag :: Text }
-                   deriving (Show, Eq, Ord, Generic, Typeable, Data)
+newtype ReleaseTag entity
+  = ReleaseTag { runReleaseTag :: Text }
+  deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
-instance ToJSONKey ReleaseTag where
+mkReleaseTag :: proxy entity -> Text -> ReleaseTag entity
+mkReleaseTag _ = ReleaseTag
+
+instance ToJSONKey (ReleaseTag entity) where
   toJSONKey = runReleaseTag
 
-instance ToJSON a => ToJSON (Map ReleaseTag a) where
+instance ToJSON a => ToJSON (Map (ReleaseTag entity) a) where
   toJSON = toJSON . M
 
-instance ToText ReleaseTag where
+instance ToText (ReleaseTag entity) where
   toText = runReleaseTag
 
-instance FromText ReleaseTag where
+instance FromText (ReleaseTag entity) where
   fromText = Just . ReleaseTag
 
-deriveSafeCopy 0 'base ''ReleaseTag
+instance SafeCopy (ReleaseTag entity) where
+  putCopy = contain . safePut . runReleaseTag
+  getCopy = contain $ mkReleaseTag (Proxy :: Proxy entity) <$> safeGet
 
-instance ToJSON ReleaseTag where
+instance ToJSON (ReleaseTag entity) where
   toJSON = toJSON . runReleaseTag
 
-instance FromJSON ReleaseTag where
+instance FromJSON (ReleaseTag entity) where
   parseJSON = fmap ReleaseTag . parseJSON
 
 data GithubLocation
@@ -107,11 +105,11 @@ defaultReleaseFilter :: ReleaseFilter
 defaultReleaseFilter = ReleaseFilter
   { publishedAfter = Nothing }
 
-matchReleaseFilter :: ReleaseFilter -> Release -> Bool
+matchReleaseFilter :: ReleaseFilter -> Release entity -> Bool
 matchReleaseFilter ReleaseFilter{..} Release{..} =
   maybe True (releasePublishedAt >) publishedAfter
 
-getReleases :: GithubLocation -> ReleaseFilter -> GithubM (Vector Release)
+getReleases :: GithubLocation -> ReleaseFilter -> GithubM (Vector (Release entity))
 getReleases (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilter =
   Vector.filter (matchReleaseFilter releaseFilter) <$>
     githubRequest
@@ -119,6 +117,6 @@ getReleases (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilte
                      []
                      Nothing)
 
-getReleaseTags :: GithubLocation -> ReleaseFilter -> GithubM (Vector ReleaseTag)
+getReleaseTags :: GithubLocation -> ReleaseFilter -> GithubM (Vector (ReleaseTag entity))
 getReleaseTags location releaseFilter =
   fmap releaseTag <$> getReleases location releaseFilter

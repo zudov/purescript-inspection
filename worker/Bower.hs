@@ -9,10 +9,9 @@ import           System.Exit          (ExitCode (..))
 
 import Servant.Common.Text
 
-import Inspection.PackageName
-import Inspection.ReleaseTag
+import Inspection.Data
 
-install :: PackageName -> ReleaseTag -> IO ExitCode
+install :: PackageName -> ReleaseTag Package -> IO ExitCode
 install packageName releaseTag = do
   putStrLn "  Fetching the sources with bower"
   (exitcode, _out, _err) <- readProcessWithExitCode "bower" ["install", bowerTarget] ""

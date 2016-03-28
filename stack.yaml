@@ -1,3 +1,6 @@
 resolver: lts-5.7
 packages:
   - '.'
+  - location:
+      git: git@github.com:futurice/haskell-base64-bytestring-type.git
+      commit: 0a1176d16c71c219fe113bc3f130f64d8dda47bc

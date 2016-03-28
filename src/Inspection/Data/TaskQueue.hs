@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-module Inspection.TaskQueue
+module Inspection.Data.TaskQueue
   ( TaskQueue(..)
   , addTask
   , selectTasks
@@ -9,21 +9,15 @@ module Inspection.TaskQueue
   , difference
   ) where
 
-import qualified Data.Map      as Map
-import           Data.Maybe    (fromMaybe)
-import           Data.Set      (Set)
+import Prelude ()
+import MyLittlePrelude
+
 import qualified Data.Set      as Set
-import           Data.Typeable (Typeable ())
-import           GHC.Generics  (Generic ())
 
 import Data.Aeson.Extra (ToJSON, FromJSON)
 
-import Inspection.BuildConfig
-import Inspection.BuildMatrix
-import Inspection.PackageName
-import Inspection.ReleaseTag
-import Inspection.Target
-import Inspection.Task
+import Inspection.Data
+import Inspection.BuildMatrix as BuildMatrix
 
 newtype TaskQueue = TaskQueue (Set Task)
                   deriving (Show, Eq, Generic, Typeable)
@@ -42,9 +36,9 @@ difference :: TaskQueue -> TaskQueue -> TaskQueue
 difference (TaskQueue a) (TaskQueue b) = TaskQueue $ Set.difference a b
 
 selectTasks :: Maybe Compiler
-            -> Maybe ReleaseTag
+            -> Maybe (ReleaseTag Compiler)
             -> Maybe PackageName
-            -> Maybe ReleaseTag
+            -> Maybe (ReleaseTag Package)
             -> TaskQueue -> TaskQueue
 selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion (TaskQueue queue)
   = TaskQueue $ Set.filter match queue
@@ -62,13 +56,10 @@ singleTask :: TaskQueue -> Maybe Task
 singleTask (TaskQueue queue) = fst <$> Set.minView queue
 
 completedTasks :: BuildMatrix -> TaskQueue
-completedTasks (BuildMatrix matrix) =
+completedTasks matrix =
   TaskQueue
-    (Map.foldMapWithKey
-      (\packageName -> Map.foldMapWithKey
-        (\versionTag -> Map.foldMapWithKey
-          (\buildConfig results ->
-            if null results
-            then Set.empty
-            else Set.singleton (Task buildConfig (Target packageName versionTag)))))
-      matrix)
+    $ Set.map fromEntry
+    $ BuildMatrix.entries Nothing Nothing Nothing Nothing matrix
+  where
+    fromEntry :: Entry -> Task
+    fromEntry Entry{..} = Task entryBuildConfig entryTarget

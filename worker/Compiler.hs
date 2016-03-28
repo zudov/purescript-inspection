@@ -7,20 +7,24 @@ module Compiler
   , getCompiler
   ) where
 
-import           Control.Monad    (unless, void)
+import           Control.Monad    (unless, void, mfilter)
 import           Data.Monoid      ((<>))
 import qualified Data.Text        as Text
+import           Data.String      (fromString)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist)
 import           System.Exit      (ExitCode (..))
 import           System.FilePath  ((</>))
 import           System.Process   (callProcess, readProcessWithExitCode)
+import qualified Data.Vector as Vector
 
 import Servant.Common.Text
 
-import Inspection.BuildResult
-import Inspection.ReleaseTag
+import Inspection.API.BuildMatrix (AddBuildResultBody(..))
+import Inspection.Data
 
-getCompilerTar :: ReleaseTag -> IO FilePath
+import qualified Inspection.BuildLogStorage as BuildLogStorage
+
+getCompilerTar :: ReleaseTag Compiler -> IO FilePath
 getCompilerTar (Text.unpack . toText -> tag) =
   filepath <$ callProcess "curl" ["-L", url, "-o", filepath, "-#"]
   where
@@ -28,18 +32,18 @@ getCompilerTar (Text.unpack . toText -> tag) =
     url = "https://github.com/purescript/purescript/releases/download/"
        <> tag <> "/linux64.tar.gz"
 
-unpackCompilerTar :: ReleaseTag -> FilePath -> IO FilePath
+unpackCompilerTar :: ReleaseTag Compiler -> FilePath -> IO FilePath
 unpackCompilerTar tag tarLocation = do
   createDirectoryIfMissing False (compilerDir tag)
   callProcess "tar" ["-xf", tarLocation, "-C", compilerDir tag, "--strip-components=1"]
   pure (compilerDir tag)
 
-compilerDir :: ReleaseTag -> FilePath
+compilerDir :: ReleaseTag Compiler -> FilePath
 compilerDir (Text.unpack . toText -> tag) = "purescript-" <> tag
 
 -- | Fetches (if necessary) compiler of a given version.
 --   Returns a path to psc executable
-getCompiler :: ReleaseTag -> IO FilePath
+getCompiler :: ReleaseTag Compiler -> IO FilePath
 getCompiler tag = do
   exists <- doesDirectoryExist (compilerDir tag)
   unless exists $ void $ do
@@ -48,17 +52,29 @@ getCompiler tag = do
   pure (compilerDir tag </> "psc")
 
 runBuild :: FilePath -- ^ Path to the compiler
-         -> ReleaseTag
+         -> ReleaseTag Compiler
          -> String -- ^ purescript sources glob
          -> String -- ^ ffi sources glob
-         -> IO BuildResult
+         -> IO AddBuildResultBody
 runBuild psc tag sources ffiSources = do
   putStrLn ("  Compiling")
-  (exitcode, Text.pack -> _stdout, Text.pack -> stderr) <- readProcessWithExitCode psc args ""
-  pure $ case exitcode of
-    ExitSuccess
-      | "Warning found:" `Text.isInfixOf` stderr -> Warnings stderr
-      | otherwise -> Success
-    ExitFailure _code -> Failure stderr
+  (exitcode, stdout, stderr) <- readProcessWithExitCode psc args ""
+  let buildResult = case exitcode of
+        ExitSuccess
+          | "Warning found:" `Text.isInfixOf` Text.pack stderr -> Warnings
+          | otherwise -> Success
+        ExitFailure _code -> Failure
+
+  let buildLogs = Vector.fromList
+        [ BuildLogStorage.BuildLog
+            (BuildLogStorage.Command "psc" (fromString (psc <> " " <> unwords args)))
+            (BuildLogStorage.CommandLog
+              (fromString <$> (mfilter null (Just stdout)))
+              (fromString <$> (mfilter null (Just stderr)))
+              (case exitcode of
+                 ExitSuccess -> 0
+                 ExitFailure code -> code))
+        ]
+  pure (AddBuildResultBody buildResult buildLogs)
   where
     args = [ sources, "-f", ffiSources ]
