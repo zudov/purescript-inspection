@@ -18,7 +18,6 @@ module MyLittlePrelude
   , module Data.Proxy
   , module Data.Time.Clock
   , module Data.HashSet
-  , module Servant.Common.Text
   , module GHC.Generics
   ) where
 
@@ -45,6 +44,5 @@ import Data.Time.Clock (UTCTime)
 import Data.ByteString (ByteString)
 import Data.Typeable (Typeable)
 import Data.Vector (Vector)
-import Servant.Common.Text (ToText, toText)
 
 import GHC.Generics (Generic)

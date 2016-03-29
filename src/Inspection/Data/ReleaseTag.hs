@@ -26,7 +26,7 @@ import qualified Data.Text          as Text
 import           Data.Aeson.Extra
 import           Data.SafeCopy       (SafeCopy(..), contain, safePut, safeGet)
 
-import           Servant.Common.Text (FromText (..))
+import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 import qualified GitHub as GH
 
@@ -60,11 +60,11 @@ instance ToJSONKey (ReleaseTag entity) where
 instance ToJSON a => ToJSON (Map (ReleaseTag entity) a) where
   toJSON = toJSON . M
 
-instance ToText (ReleaseTag entity) where
-  toText = runReleaseTag
+instance ToHttpApiData (ReleaseTag entity) where
+  toUrlPiece = runReleaseTag
 
-instance FromText (ReleaseTag entity) where
-  fromText = Just . ReleaseTag
+instance FromHttpApiData (ReleaseTag entity) where
+  parseUrlPiece = Right . ReleaseTag
 
 instance SafeCopy (ReleaseTag entity) where
   putCopy = contain . safePut . runReleaseTag

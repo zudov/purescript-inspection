@@ -7,7 +7,7 @@ import qualified Data.Text as Text
 import           System.Process       (readProcessWithExitCode)
 import           System.Exit          (ExitCode (..))
 
-import Servant.Common.Text
+import Web.HttpApiData (toUrlPiece)
 
 import Inspection.Data
 
@@ -17,4 +17,4 @@ install packageName releaseTag = do
   (exitcode, _out, _err) <- readProcessWithExitCode "bower" ["install", bowerTarget] ""
   pure exitcode
   where
-    bowerTarget = Text.unpack (toText packageName <> "#" <> toText releaseTag)
+    bowerTarget = Text.unpack (toUrlPiece packageName <> "#" <> toUrlPiece releaseTag)

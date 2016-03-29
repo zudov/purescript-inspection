@@ -19,6 +19,8 @@ import Data.ByteString.Base64.Type (getByteString64, ByteString64)
 import Network.HTTP.Conduit (RequestBody(..))
 import Network.HTTP.Client (Manager)
 
+import Web.HttpApiData (toUrlPiece)
+
 import qualified Aws
 import qualified Aws.Core as Aws
 import Aws.S3 as S3
@@ -103,7 +105,7 @@ putBuildLogs (Environment{envConfig = Config{..}, ..}) entry buildLogs = do
               [ ("command-id", commandIdentifier)
               , ("command", command)
               , ("log-type", logType)
-              , ("exit-code", toText (exitCode buildLogCommandLog))
+              , ("exit-code", toUrlPiece (exitCode buildLogCommandLog))
               ]
               content
   pure $ fmap resolveBuildLog buildLogs
@@ -133,13 +135,13 @@ storedLogURL bucket filename logType =
 
 entryToFilename :: (Compiler, ReleaseTag Compiler, PackageName, ReleaseTag Package) -> Text
 entryToFilename (compiler, compilerVersion, package, packageVersion) =
-  toText package <> "/" <> toText packageVersion <> "/" <>
-  toText compiler <> "/" <> toText compilerVersion
+  toUrlPiece package <> "/" <> toUrlPiece packageVersion <> "/" <>
+  toUrlPiece compiler <> "/" <> toUrlPiece compilerVersion
 
 entryMetadata :: (Compiler, ReleaseTag Compiler, PackageName, ReleaseTag Package) -> [(Text, Text)]
 entryMetadata (compiler, compilerVersion, package, packageVersion) =
-  [ ("package", toText package)
-  , ("package-version", toText packageVersion)
-  , ("compiler", toText compiler)
-  , ("compiler-version", toText compilerVersion)
+  [ ("package", toUrlPiece package)
+  , ("package-version", toUrlPiece packageVersion)
+  , ("compiler", toUrlPiece compiler)
+  , ("compiler-version", toUrlPiece compilerVersion)
   ]

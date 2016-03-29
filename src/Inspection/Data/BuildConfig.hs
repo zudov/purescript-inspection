@@ -18,8 +18,7 @@ import Data.Aeson.Extra
 import Data.Aeson.Types    (Options (..), defaultOptions)
 import Data.SafeCopy       (base, deriveSafeCopy)
 
-import Servant.Common.Text (FromText (..), ToText (..))
-
+import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Inspection.Data.PackageName
 import Inspection.Data.ReleaseTag
 
@@ -34,29 +33,29 @@ data BuildConfig
 data Compiler = Purescript
               deriving (Eq, Show, Ord, Generic, Typeable, Data)
 
-instance ToText BuildConfig where
-  toText BuildConfig{..} = toText buildConfigCompiler
+instance ToHttpApiData BuildConfig where
+  toUrlPiece BuildConfig{..} = toUrlPiece buildConfigCompiler
                         <> "-"
-                        <> toText buildConfigCompilerRelease
+                        <> toUrlPiece buildConfigCompilerRelease
 
-instance FromText BuildConfig where
-  fromText (Text.splitOn "-" -> [compiler, compilerRelease]) =
-      BuildConfig <$> fromText compiler
-                  <*> fromText compilerRelease
-  fromText _ = Nothing
+instance FromHttpApiData BuildConfig where
+  parseUrlPiece (Text.splitOn "-" -> [compiler, compilerRelease]) =
+      BuildConfig <$> parseUrlPiece compiler
+                  <*> parseUrlPiece compilerRelease
+  parseUrlPiece _ = Left "Failed to parse BuildConfig"
 
 instance ToJSONKey BuildConfig where
-  toJSONKey = toText
+  toJSONKey = toUrlPiece
 
 instance ToJSON a => ToJSON (Map BuildConfig a) where
   toJSON = toJSON . M
 
-instance ToText Compiler where
-  toText Purescript = "purescript"
+instance ToHttpApiData Compiler where
+  toUrlPiece Purescript = "purescript"
 
-instance FromText Compiler where
-  fromText "purescript" = Just Purescript
-  fromText _ = Nothing
+instance FromHttpApiData Compiler where
+  parseUrlPiece "purescript" = Right Purescript
+  parseUrlPiece _ = Left "Unknown Compiler"
 
 deriveSafeCopy 0 'base ''Compiler
 deriveSafeCopy 0 'base ''BuildConfig
@@ -76,11 +75,11 @@ instance FromJSON BuildConfig where
       modifier a = a
 
 instance FromJSON Compiler where
-  parseJSON (String s) = maybe mzero pure (fromText s)
+  parseJSON (String s) = either (const mzero) pure (parseUrlPiece s)
   parseJSON _ = fail "'Compiler' should be a String"
 
 instance ToJSON Compiler where
-  toJSON = toJSON . toText
+  toJSON = toJSON . toUrlPiece
 
 compilerRepo :: Compiler -> GithubLocation
 compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")

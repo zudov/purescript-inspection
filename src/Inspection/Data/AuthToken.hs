@@ -11,19 +11,19 @@ import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 
 import qualified GitHub as GH
 
-import Servant.Common.Text (FromText(..))
+import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 
 newtype AuthToken = AuthToken { runAuthToken :: ByteString } deriving (Show, Eq, Generic)
 
 instance Hashable AuthToken
 
-instance FromText AuthToken where
-  fromText t = case Text.words t of
-    ["token", token] -> Just (AuthToken (encodeUtf8 token))
-    _                -> Nothing
+instance FromHttpApiData AuthToken where
+  parseUrlPiece t = case Text.words t of
+    ["token", token] -> Right (AuthToken (encodeUtf8 token))
+    _                -> Left "Failed to parse AuthToken"
 
-instance ToText AuthToken where
-  toText (AuthToken token) = Text.unwords ["token", decodeUtf8 token]
+instance ToHttpApiData AuthToken where
+  toUrlPiece (AuthToken token) = Text.unwords ["token", decodeUtf8 token]
 
 toGithubAuth :: AuthToken -> GH.Auth
 toGithubAuth (AuthToken t) = GH.OAuth t

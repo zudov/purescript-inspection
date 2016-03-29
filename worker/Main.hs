@@ -4,7 +4,7 @@
 module Main where
 
 import           Control.Monad              (forM_, when)
-import           Control.Monad.Trans.Either (runEitherT)
+import           Control.Monad.Except       (runExceptT)
 import           Data.Monoid                ((<>))
 import qualified Data.Set                   as Set
 import qualified Data.Text                  as Text
@@ -17,7 +17,10 @@ import           System.IO.Temp             (withSystemTempDirectory)
 import           System.Environment         (lookupEnv)
 import           System.Exit                (ExitCode (..))
 
-import Servant.Common.Text (ToText(..), FromText(..))
+import Web.HttpApiData
+
+import Network.HTTP.Client                  (newManager)
+import Network.HTTP.Client.TLS              (tlsManagerSettings)
 
 import Inspection.Data
 import Inspection.Data.TaskQueue
@@ -35,8 +38,8 @@ data Query = Query { qCompiler        :: Maybe Compiler
                    }
            deriving (Show)
 
-toString :: (ToText a) => a -> String
-toString = Text.unpack . toText
+toString :: (ToHttpApiData a) => a -> String
+toString = Text.unpack . toUrlPiece
 
 getQuery :: IO Query
 getQuery = Query <$> lookupFlag "COMPILER"
@@ -44,14 +47,15 @@ getQuery = Query <$> lookupFlag "COMPILER"
                  <*> lookupFlag "PACKAGE_NAME"
                  <*> lookupFlag "PACKAGE_VERSION"
 
-lookupFlag :: FromText a => String -> IO (Maybe a) 
-lookupFlag name = (fromText . Text.pack =<<) <$> lookupEnv name
+lookupFlag :: FromHttpApiData a => String -> IO (Maybe a) 
+lookupFlag name = (either (const Nothing) Just . parseUrlPiece . Text.pack =<<) <$> lookupEnv name
 
 main :: IO ()
 main = do
+  manager <- newManager tlsManagerSettings
   Query{..} <- getQuery
   authToken <- lookupFlag "AUTH_TOKEN"
-  Right (TaskQueue tasks) <- runEitherT $ getTasks qCompiler qCompilerVersion
+  Right (TaskQueue tasks) <- runExceptT $ getTasks manager qCompiler qCompilerVersion
                                                    qPackage qPackageVersion False
   putStrLn ("Got " <> show (length tasks) <> " tasks.")
   forM_ (zip [1..] (Set.toList tasks)) $ \(index :: Int, (Task{ taskBuildConfig =
@@ -72,8 +76,9 @@ main = do
       case bowerExitCode of
         ExitFailure _code -> do
           putStrLn "  Reporting: bower failure"
-          runEitherT $
+          runExceptT $
             addBuildResult
+              manager
               authToken
               packageName packageVersion
               compiler compilerVersion
@@ -82,5 +87,13 @@ main = do
           buildResultBody <- runBuild (dir </> psc) compilerVersion "bower_components/purescript-*/src/**/*.purs"
                                                                 "bower_components/purescript-*/src/**/*.js"
           putStrLn ("  Reporting: " <> show (buildResult buildResultBody))
-          runEitherT $ addBuildResult authToken packageName packageVersion compiler compilerVersion buildResultBody
+          runExceptT $
+            addBuildResult
+              manager
+              authToken
+              packageName
+              packageVersion
+              compiler
+              compilerVersion
+              buildResultBody
       setCurrentDirectory dir

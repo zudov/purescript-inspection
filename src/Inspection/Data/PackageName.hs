@@ -12,7 +12,7 @@ import Data.Data (Data)
 
 import Data.Aeson.Extra
 import Data.SafeCopy       (base, deriveSafeCopy)
-import Servant.Common.Text (FromText(..), ToText(..))
+import Web.HttpApiData
 
 newtype PackageName = PackageName { runPackageName :: Text }
                     deriving (Show, Eq, Ord, Generic, Typeable, Data)
@@ -31,8 +31,8 @@ instance ToJSONKey PackageName where
 instance ToJSON a => ToJSON (Map PackageName a) where
   toJSON = toJSON . M
 
-instance FromText PackageName where
-  fromText = Just . PackageName
+instance FromHttpApiData PackageName where
+  parseUrlPiece = Right . PackageName
 
-instance ToText PackageName where
-  toText = runPackageName
+instance ToHttpApiData PackageName where
+  toUrlPiece = runPackageName

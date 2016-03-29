@@ -9,6 +9,8 @@ import MyLittlePrelude
 import Data.Aeson.Extra (ToJSON, FromJSON)
 import Data.SafeCopy (deriveSafeCopy, base)
 
+import Web.HttpApiData
+
 import Inspection.Data.PackageName (PackageName)
 import Inspection.Data.ReleaseTag (ReleaseTag)
 import Inspection.Data.Package (Package)
@@ -20,9 +22,9 @@ data Target
       }
   deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
-instance ToText Target where
-  toText (Target packageName packageVersion) =
-    toText packageName <> "-" <> toText packageVersion
+instance ToHttpApiData Target where
+  toUrlPiece (Target packageName packageVersion) =
+    toUrlPiece packageName <> "-" <> toUrlPiece packageVersion
 
 instance ToJSON Target
 instance FromJSON Target

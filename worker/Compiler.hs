@@ -17,7 +17,7 @@ import           System.FilePath  ((</>))
 import           System.Process   (callProcess, readProcessWithExitCode)
 import qualified Data.Vector as Vector
 
-import Servant.Common.Text
+import Web.HttpApiData
 
 import Inspection.API.BuildMatrix (AddBuildResultBody(..))
 import Inspection.Data
@@ -25,7 +25,7 @@ import Inspection.Data
 import qualified Inspection.BuildLogStorage as BuildLogStorage
 
 getCompilerTar :: ReleaseTag Compiler -> IO FilePath
-getCompilerTar (Text.unpack . toText -> tag) =
+getCompilerTar (Text.unpack . toUrlPiece -> tag) =
   filepath <$ callProcess "curl" ["-L", url, "-o", filepath, "-#"]
   where
     filepath = "purescript-" <> tag <> ".tar.gz"
@@ -39,7 +39,7 @@ unpackCompilerTar tag tarLocation = do
   pure (compilerDir tag)
 
 compilerDir :: ReleaseTag Compiler -> FilePath
-compilerDir (Text.unpack . toText -> tag) = "purescript-" <> tag
+compilerDir (Text.unpack . toUrlPiece -> tag) = "purescript-" <> tag
 
 -- | Fetches (if necessary) compiler of a given version.
 --   Returns a path to psc executable
