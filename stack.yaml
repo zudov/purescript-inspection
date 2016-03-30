@@ -8,3 +8,4 @@ extra-deps:
   - servant-0.5
   - servant-server-0.5
   - servant-client-0.5
+  - refined-0.1.2

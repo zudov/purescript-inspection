@@ -4,13 +4,16 @@
 {-# LANGUAGE TemplateHaskell   #-}
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Inspection.Data.ReleaseTag
-  ( ReleaseTag(..)
+  ( ReleaseTag
   , mkReleaseTag
+  , IsReleaseTag
   , Release(..)
   , GithubLocation(..)
-  , GithubOwner(..)
-  , anonymous
+  , GithubOwner
+  , IsGithubOwner
   , getReleases
   , getReleaseTags
   , ReleaseFilter(..)
@@ -23,13 +26,12 @@ import MyLittlePrelude
 import qualified Data.Vector        as Vector
 import qualified Data.Text          as Text
 
-import           Data.Aeson.Extra
-import           Data.SafeCopy       (SafeCopy(..), contain, safePut, safeGet)
+import Data.Aeson.Extra
+import Web.HttpApiData (toUrlPiece)
 
-import           Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
+import Refined.Extended
 
 import qualified GitHub as GH
-
 
 import Inspection.Data.PackageName
 import Inspection.GithubM
@@ -42,39 +44,22 @@ data Release entity
   deriving (Show, Eq, Ord)
 
 instance FromJSON (Release entity) where
-  parseJSON (Object o) = Release <$> (ReleaseTag <$> o .: "tag_name")
-                                 <*> (o .: "published_at")
+  parseJSON (Object o) = do
+    tag_name <- o .: "tag_name"
+    published_at <- o .: "published_at"
+    either fail pure $ Release <$> refine tag_name <*> published_at
   parseJSON _ = mzero
 
--- | Release tags as they appear in Github's releases
-newtype ReleaseTag entity
-  = ReleaseTag { runReleaseTag :: Text }
-  deriving (Show, Eq, Ord, Generic, Typeable, Data)
+data IsReleaseTag entity deriving Typeable
+deriving instance Data entity => Data (IsReleaseTag entity)
+
+instance Predicate (IsReleaseTag entity) Text where
+  validate _ _ = Nothing
+
+type ReleaseTag entity = Refined (IsReleaseTag entity) Text 
 
 mkReleaseTag :: proxy entity -> Text -> ReleaseTag entity
-mkReleaseTag _ = ReleaseTag
-
-instance ToJSONKey (ReleaseTag entity) where
-  toJSONKey = runReleaseTag
-
-instance ToJSON a => ToJSON (Map (ReleaseTag entity) a) where
-  toJSON = toJSON . M
-
-instance ToHttpApiData (ReleaseTag entity) where
-  toUrlPiece = runReleaseTag
-
-instance FromHttpApiData (ReleaseTag entity) where
-  parseUrlPiece = Right . ReleaseTag
-
-instance SafeCopy (ReleaseTag entity) where
-  putCopy = contain . safePut . runReleaseTag
-  getCopy = contain $ mkReleaseTag (Proxy :: Proxy entity) <$> safeGet
-
-instance ToJSON (ReleaseTag entity) where
-  toJSON = toJSON . runReleaseTag
-
-instance FromJSON (ReleaseTag entity) where
-  parseJSON = fmap ReleaseTag . parseJSON
+mkReleaseTag _ = either error id . refine
 
 data GithubLocation
   = GithubLocation { githubOwner :: GithubOwner
@@ -82,15 +67,17 @@ data GithubLocation
                    }
   deriving (Show, Eq, Ord, Generic, Typeable, Data)
 
-newtype GithubOwner = GithubOwner Text
-                    deriving (Show, Eq, Ord, Generic, Typeable, Data)
+data IsGithubOwner deriving (Typeable)
+deriving instance Data IsGithubOwner
 
-anonymous :: GithubOwner
-anonymous = GithubOwner "anonymous"
+instance Predicate IsGithubOwner Text where
+  validate _ _ = Nothing
+
+type GithubOwner = Refined IsGithubOwner Text
 
 instance FromJSON GithubLocation where
   parseJSON (String (Text.splitOn "/" -> [owner, packageName])) =
-    pure (GithubLocation (GithubOwner owner) (PackageName packageName))
+      either fail pure (GithubLocation <$> refine owner <*> refine packageName)
   parseJSON _ = mzero
 
 data ReleaseFilter
@@ -110,10 +97,10 @@ matchReleaseFilter ReleaseFilter{..} Release{..} =
   maybe True (releasePublishedAt >) publishedAfter
 
 getReleases :: GithubLocation -> ReleaseFilter -> GithubM (Vector (Release entity))
-getReleases (GithubLocation (GithubOwner owner) (PackageName repo)) releaseFilter =
+getReleases (GithubLocation owner repo) releaseFilter =
   Vector.filter (matchReleaseFilter releaseFilter) <$>
     githubRequest
-      (GH.PagedQuery ["repos", Text.unpack owner, Text.unpack repo, "releases"]
+      (GH.PagedQuery (Text.unpack <$> ["repos", toUrlPiece owner, toUrlPiece repo, "releases"])
                      []
                      Nothing)
 

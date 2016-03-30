@@ -1,38 +1,20 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 module Inspection.Data.PackageName
-  ( PackageName(..)
+  ( PackageName
+  , IsPackageName
   ) where
 
-import Data.Map  (Map)
-import Data.Text (Text)
-import GHC.Generics (Generic)
-import Data.Typeable (Typeable)
-import Data.Data (Data)
+import Prelude ()
+import MyLittlePrelude
 
-import Data.Aeson.Extra
-import Data.SafeCopy       (base, deriveSafeCopy)
-import Web.HttpApiData
+import Refined.Extended
 
-newtype PackageName = PackageName { runPackageName :: Text }
-                    deriving (Show, Eq, Ord, Generic, Typeable, Data)
+type PackageName = Refined IsPackageName Text
 
-deriveSafeCopy 0 'base ''PackageName
+data IsPackageName deriving (Typeable)
 
-instance ToJSON PackageName where
-  toJSON = toJSON . runPackageName
+deriving instance Data IsPackageName
 
-instance FromJSON PackageName where
-  parseJSON = fmap PackageName . parseJSON
-
-instance ToJSONKey PackageName where
-  toJSONKey = runPackageName
-
-instance ToJSON a => ToJSON (Map PackageName a) where
-  toJSON = toJSON . M
-
-instance FromHttpApiData PackageName where
-  parseUrlPiece = Right . PackageName
-
-instance ToHttpApiData PackageName where
-  toUrlPiece = runPackageName
+instance Predicate IsPackageName Text where
+  validate _ _ = Nothing

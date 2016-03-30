@@ -82,7 +82,7 @@ instance ToJSON Compiler where
   toJSON = toJSON . toUrlPiece
 
 compilerRepo :: Compiler -> GithubLocation
-compilerRepo Purescript = GithubLocation (GithubOwner "purescript") (PackageName "purescript")
+compilerRepo Purescript = GithubLocation "purescript" "purescript"
 
 getBuildConfigs :: Compiler -> ReleaseFilter -> GithubM (Vector BuildConfig)
 getBuildConfigs c releaseFilter =
