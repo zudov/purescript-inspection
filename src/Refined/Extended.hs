@@ -14,6 +14,7 @@ import Data.Aeson.Extra (FromJSON(..), ToJSON(..), ToJSONKey(..))
 import Web.HttpApiData (FromHttpApiData(..), ToHttpApiData(..))
 import Data.SafeCopy
 import Data.Typeable
+import Lucid (ToHtml(..))
 
 instance (Predicate p x, IsString x) => IsString (Refined p x) where
   fromString = either error id . refine . fromString 
@@ -42,3 +43,7 @@ instance (Predicate p x, SafeCopy x, Typeable p, Typeable x) => SafeCopy (Refine
   putCopy = contain . safePut . unrefine
   getCopy = contain (either fail pure . refine =<< safeGet)
   errorTypeName = show . typeRep
+
+instance (Predicate p x, ToHtml x) => ToHtml (Refined p x) where
+  toHtml = toHtml . unrefine
+  toHtmlRaw = toHtml . unrefine

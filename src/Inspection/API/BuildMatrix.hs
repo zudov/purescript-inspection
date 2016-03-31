@@ -21,6 +21,9 @@ import           Data.Aeson
 import           Data.ByteString.Base64.Type (ByteString64)
 import Data.Acid (query, update)
 import Servant
+import Servant.HTML.Lucid
+import Lucid as Lucid (ToHtml(..))
+import Lucid.Html5
 
 import qualified Data.Vector as Vector
 
@@ -46,7 +49,7 @@ type GetBuildResultsAPI =
     :> QueryParam "compilerVersion" (ReleaseTag Compiler)
        :> QueryParam "packageName" PackageName
           :> QueryParam "packageVersion" (ReleaseTag Package)
-             :> Get '[JSON] (Set BuildMatrix.Entry)
+             :> Get '[JSON, HTML] GetBuildResults
 
 type AddBuildResultAPI
   = Header "Authorization" AuthToken
@@ -57,6 +60,34 @@ type AddBuildResultAPI
                 :> ReqBody '[JSON] AddBuildResultBody
                    :> Post '[JSON] EventId
 
+newtype GetBuildResults
+  = GetBuildResults { runGetBuildResults :: Set BuildMatrix.Entry }
+
+instance ToJSON GetBuildResults where
+  toJSON = toJSON . runGetBuildResults
+
+instance ToHtml GetBuildResults where
+  toHtml (GetBuildResults entries) = do
+    table_ $ do
+      thead_ $ do
+        tr_ $ do
+          th_ "Target"
+          th_ "Compiler"
+          th_ "Result"
+      tbody_ $ do
+        forM_ entries $ \(Entry{entryTarget = Target{..}, entryBuildConfig = BuildConfig{..},..}) -> do
+          tr_ $ do
+            td_ $ do
+              toHtml targetPackageName
+              "-"
+              toHtml targetReleaseTag
+            td_ $ do
+              toHtml $ toUrlPiece $ buildConfigCompiler
+              "-"
+              toHtml $ buildConfigCompilerRelease
+            td_ $ do
+              toHtml $ show entryBuildResult
+    
 buildMatrixServer :: ServerT BuildMatrixAPI Inspector
 buildMatrixServer = getBuildResults
                :<|> addBuildResult
@@ -64,11 +95,15 @@ buildMatrixServer = getBuildResults
 getBuildResults
   :: Maybe Compiler -> Maybe (ReleaseTag Compiler)
   -> Maybe PackageName -> Maybe (ReleaseTag Package)
-  -> Inspector (Set BuildMatrix.Entry)
+  -> Inspector GetBuildResults
 getBuildResults mCompiler mCompilerVersion mPackageName mPackageVersion = do
   acid <- asks envAcid
   buildMatrix <- liftIO (query acid GetBuildMatrix)
-  pure $ BuildMatrix.entries mCompiler mCompilerVersion mPackageName mPackageVersion buildMatrix
+  pure $ GetBuildResults $
+    BuildMatrix.entries
+      mCompiler mCompilerVersion
+      mPackageName mPackageVersion
+      buildMatrix
 
 data AddBuildResultBody
   = AddBuildResultBody
