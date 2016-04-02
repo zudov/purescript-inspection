@@ -1,36 +1,29 @@
-# Use new container infrastructure to enable caching
 sudo: false
-
-# Choose a lightweight base image; we provide our own build tools.
 language: c
-
-# GHC depends on GMP. You can add other dependencies here as well.
 addons:
   apt:
     packages:
     - libgmp-dev
-
-# The different configurations we want to test. You could also do things like
-# change flags or use --stack-yaml to point to a different file.
 env:
 - ARGS=""
-# - ARGS="--resolver lts-2"
-# - ARGS="--resolver lts-3"
-# - ARGS="--resolver lts"
-# - ARGS="--resolver nightly"
-
 before_install:
-# Download and unpack the stack executable
 - mkdir -p ~/.local/bin
 - export PATH=$HOME/.local/bin:$PATH
-- travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-
-# This line does all of the work: installs GHC if necessary, build the library,
-# executables, and test suites, and runs the test suites. --no-terminal works
-# around some quirks in Travis's terminal implementation.
-script: stack $ARGS --no-terminal --install-ghc test
-
-# Caching so the next build will be fast too.
+- travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards
+  --strip-components=1 -C ~/.local/bin '*/stack'
+script: stack $ARGS --no-terminal --install-ghc test --copy-bins
 cache:
   directories:
-  - $HOME/.stack
+  - "$HOME/.stack"
+deploy:
+  provider: s3
+  access_key_id: AKIAIYORPZPYJQV6EHFQ
+  secret_access_key:
+    secure: W/1q7KoGsrQC1JgxC6KBRfobK5RKD8YeEze9q/KyVtbrxtC2bGh9nyFt2n6f388la9fzsnhNdU9tH62Dz/bBTg9x6fDMLNmEMJy9yvDIc7bg1VWQzrG6UsQQVOw1Cl2llzHEAFbEZbqVfyzuemSdtG93Gj+ERwIct8NWCZrKfU9GhTsLwLAH7cOeSSq81KDWtKcjePTtENsP28SRiMdIEtHuLWne8wz3SQI+wcPIiJqvyXz6c4RNZfQvxZk2VtKgoelYR/RSZas6qGOE+cw7J5ZfpV1wKjV5VkO8+wRF0hHY41fl1gimgdFHPq1BIWqTb5QqWvhLscHbnGkmMGS4qia/JlEk99MF4lg1kSQQjvBLOahMvJ97R5jBJrZ3lhdgtOEDLvzc3G/OaNeSPJ9cQWz3pegH6KjaGjY8OXiCWOHGyAC9pHDljMUJfXOhaQFbNfaAN6L0TLGqndNNp2OzHt4knDp/bBgEuXbqK9tWIZINEpF+9za5jve8XGoqAH1t3xn3Suts1FQbMOuIhRMgkJ1RjcFlCBw7g72s/NweuPXa3mUtXDE7PIWWgBwBiCVonCib8lIhLtDKea+ev1AvB4ytFeHZJ6hY0V4M2kcSWi2WPouxnZNJ3B7YMPx/zS1ZGoRswF6+11nlFbt6LaWAM54vukCwc32oQZyI+M+IlE4=
+  bucket: binaries.inspection.purescript.org
+  region: eu-west-1  
+  local-dir: "/home/travis/.local/bin/"
+  skip_cleanup: true
+  on:
+    repo: zudov/purescript-inspection
+  acl: public_read
