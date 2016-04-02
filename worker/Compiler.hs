@@ -71,7 +71,8 @@ runBuild psc tag sources ffiSources = do
             (BuildLogStorage.Command "psc" (fromString (psc <> " " <> unwords args)))
             (BuildLogStorage.CommandLog
               (fromString <$> (mfilter (not . null . (filter (not . isSpace))) (Just stdout)))
-              (fromString <$> (mfilter (not . null . (filter (not . isSpace))) (Just stderr)))
+              (fromString <$> (mfilter (not .
+                                        null . (filter (not . isSpace))) (Just stderr)))
               (case exitcode of
                  ExitSuccess -> 0
                  ExitFailure code -> code))

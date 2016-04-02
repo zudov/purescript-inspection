@@ -24,6 +24,7 @@ import Servant
 import Servant.HTML.Lucid
 import Lucid as Lucid (ToHtml(..))
 import Lucid.Html5
+import qualified Data.Text as Text
 
 import qualified Data.Vector as Vector
 
@@ -38,6 +39,7 @@ import Inspection.Config
 import Inspection.GithubM
 import Inspection.Data.BuildConfig (getBuildConfigs)
 import Inspection.Data.AuthToken (toGithubAuth)
+import Inspection.BuildLogStorage (BuildLog(..), Command(..), CommandLog(..))
 import qualified Inspection.BuildLogStorage as BuildLogStorage
 
 type BuildMatrixAPI =
@@ -74,6 +76,7 @@ instance ToHtml GetBuildResults where
           th_ "Target"
           th_ "Compiler"
           th_ "Result"
+          th_ "Logs"
       tbody_ $ do
         forM_ entries' $ \(Entry{entryTarget = Target{..}, entryBuildConfig = BuildConfig{..},..}) -> do
           tr_ $ do
@@ -87,6 +90,23 @@ instance ToHtml GetBuildResults where
               toHtml $ buildConfigCompilerRelease
             td_ $ do
               toHtml $ show entryBuildResult
+            td_ $ do
+              ul_ $ do
+                forM_ entryLogs $
+                  \(BuildLog{ buildLogCommand = Command{..}
+                            , buildLogCommandLog = CommandLog{..} }) -> do
+                  li_ $ do
+                    span_ [ title_ command] $ toHtml commandIdentifier
+                    " "
+                    toHtml ("(ExitCode: " <> show exitCode <> ")")
+                    " -- "
+                    forM_ stdout (\url -> a_ [ href_ (Text.pack url) ] "stdout")
+                    " "
+                    forM_ stderr (\url -> a_ [ href_ (Text.pack url) ] "stderr")
+                    
+
+                    
+                
   toHtmlRaw a = toHtml a
     
 buildMatrixServer :: ServerT BuildMatrixAPI Inspector
@@ -109,7 +129,7 @@ getBuildResults mCompiler mCompilerVersion mPackageName mPackageVersion = do
 data AddBuildResultBody
   = AddBuildResultBody
       { buildResult :: BuildResult
-      , buildLogs   :: Vector (BuildLogStorage.BuildLog ByteString64)
+      , buildLogs   :: Vector (BuildLog ByteString64)
       }
   deriving (Generic)
 
@@ -149,11 +169,11 @@ addBuildResult (Just (toGithubAuth -> auth)) packageName packageVersion compiler
                throwError $ err404 { errBody = encode $ object
                         [ "errors" .= [ "Unknown compiler version" :: String ]]}
              else do
-              buildLogs <- BuildLogStorage.putBuildLogs
+              buildLogs_ <- BuildLogStorage.putBuildLogs
                      envBuildLogStorageEnv
                      (compiler, compilerVersion, packageName, packageVersion)
                      buildLogs
                      
-              let event = AddBuildResult packageName packageVersion buildConfig buildResult buildLogs
+              let event = AddBuildResult packageName packageVersion buildConfig buildResult buildLogs_
               currentTime <- liftIO getCurrentTime
               liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event
