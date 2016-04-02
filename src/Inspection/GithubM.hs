@@ -55,7 +55,8 @@ instance Monoid GithubCache where
 executeCachedRequest
   :: forall k a m. (MonadIO m, MonadCatch m, MonadError GH.Error m, MonadWriter GithubCache m)
   => HTTP.Manager -> GH.Auth -> GithubCache -> GH.Request k a -> m a
-executeCachedRequest mgr auth ghCache ghReq =
+executeCachedRequest mgr auth ghCache ghReq = do
+  liftIO $ print ghReq
   case ghReq of
     GH.Query {} ->
       GH.makeHttpRequest (Just auth) ghReq
@@ -72,8 +73,9 @@ executeCachedRequest mgr auth ghCache ghReq =
   where
     cachedHttpLbs
       :: GithubCache -> HTTP.Request -> m (HTTP.Response LBS.ByteString)
-    cachedHttpLbs (GithubCache cache) httpReq =
-         try (liftIO $ HTTP.httpLbs conditionalHttpReq mgr) >>= \case
+    cachedHttpLbs (GithubCache cache) httpReq = do
+       liftIO $ putStrLn resourceUrl
+       try (liftIO $ HTTP.httpLbs conditionalHttpReq mgr) >>= \case
          Right res -> do
            tell $ GithubCache $ HashMap.singleton (auth, resourceUrl) (LBS.toStrict <$> res)
            pure res

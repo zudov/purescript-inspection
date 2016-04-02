@@ -21,12 +21,14 @@ import Data.Aeson.Extra
 import Data.IxSet.Typed as IxSet
 
 import Inspection.Data
+import Inspection.BuildLogStorage
 
 data Entry
   = Entry
       { entryTarget      :: Target
       , entryBuildConfig :: BuildConfig
       , entryBuildResult :: BuildResult
+      , entryLogs        :: Vector (BuildLog String)
       }
   deriving (Show, Eq, Ord, Generic, Data, Typeable)
 
@@ -37,6 +39,7 @@ instance ToJSON Entry where
     , "compiler"        .= buildConfigCompiler entryBuildConfig
     , "compilerVersion" .= buildConfigCompilerRelease entryBuildConfig
     , "buildResult"     .= entryBuildResult
+    , "logs"            .= entryLogs
     ]
 
 type EntryIxs = '[PackageName, ReleaseTag Package, Compiler, ReleaseTag Compiler]
@@ -62,10 +65,10 @@ instance Monoid BuildMatrix where
   mappend (BuildMatrix a) (BuildMatrix b) = BuildMatrix (mappend a b)
 
 execute :: Event -> BuildMatrix -> BuildMatrix
-execute (AddBuildResult packageName releaseTag buildConfig buildResult) (BuildMatrix buildMatrix) =
+execute (AddBuildResult packageName releaseTag buildConfig buildResult buildLogs) (BuildMatrix buildMatrix) =
     BuildMatrix $
       IxSet.insert
-        (Entry (Target packageName releaseTag) buildConfig buildResult)
+        (Entry (Target packageName releaseTag) buildConfig buildResult buildLogs)
         buildMatrix
 
 restore :: EventLog Event -> BuildMatrix

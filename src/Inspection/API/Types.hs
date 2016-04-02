@@ -42,5 +42,7 @@ inspectorToEither :: Environment -> Inspector :~> ExceptT ServantErr IO
 inspectorToEither env = runReaderTNat env
 
 githubError :: GH.Error -> ServantErr
-githubError _ = err500 { errBody = encode $ object
-                          ["errors" .= ["Failure when querying the GitHub API." :: String]]}
+githubError e = err500 { errBody = encode $ object
+                          ["errors" .= [ "Failure when querying the GitHub API." :: String
+                                       , show e
+                                       ]]}

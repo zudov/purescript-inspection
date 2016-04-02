@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -36,6 +37,8 @@ import qualified GitHub as GH
 import Inspection.Data.PackageName
 import Inspection.GithubM
 
+import Debug.Trace
+
 data Release entity
   = Release
       { releaseTag         :: ReleaseTag entity
@@ -45,10 +48,10 @@ data Release entity
 
 instance FromJSON (Release entity) where
   parseJSON (Object o) = do
-    tag_name <- o .: "tag_name"
-    published_at <- o .: "published_at"
-    either fail pure $ Release <$> refine tag_name <*> published_at
-  parseJSON _ = mzero
+    tag_name :: Text <- o .: "tag_name"
+    published_at :: UTCTime <- o .: "published_at"
+    either fail pure $ Release <$> refine tag_name <*> Right published_at
+  parseJSON _ = fail "Release is not an Object"
 
 data IsReleaseTag entity deriving Typeable
 deriving instance Data entity => Data (IsReleaseTag entity)

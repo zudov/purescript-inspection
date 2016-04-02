@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE LambdaCase#-}
+{-# LANGUAGE TemplateHaskell #-}
 module Inspection.BuildLogStorage where
 
 import MyLittlePrelude
@@ -13,6 +14,7 @@ import MyLittlePrelude
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.Aeson
 import qualified Data.Text as Text
+import Data.SafeCopy (deriveSafeCopy, base)
 
 import Data.ByteString.Base64.Type (getByteString64, ByteString64)
 
@@ -60,7 +62,9 @@ data Command
       { commandIdentifier :: Text -- ^ Unique command identifier, used in the filenames
       , command           :: Text -- ^ A (pseudo-)shell command
       }
-  deriving (Eq, Ord, Generic, Typeable)
+  deriving (Eq, Ord, Generic, Typeable, Show, Data)
+
+deriveSafeCopy 0 'base ''Command
 
 instance FromJSON Command
 instance ToJSON Command
@@ -71,7 +75,9 @@ data CommandLog a
     , stderr   :: Maybe a
     , exitCode :: Int
     }
-  deriving (Generic, Typeable)
+  deriving (Generic, Typeable, Show, Eq, Ord, Data)
+
+deriveSafeCopy 0 'base ''CommandLog
 
 instance FromJSON a => FromJSON (CommandLog a)
 instance ToJSON a => ToJSON (CommandLog a)
@@ -81,17 +87,19 @@ data BuildLog a
       { buildLogCommand    :: Command
       , buildLogCommandLog :: CommandLog a
       }
-  deriving (Generic, Typeable)
+  deriving (Generic, Typeable, Show, Eq, Ord, Data)
+
+deriveSafeCopy 0 'base ''BuildLog
 
 instance FromJSON a => FromJSON (BuildLog a)
 instance ToJSON a => ToJSON (BuildLog a)
 
 putBuildLogs
-  :: forall m. (MonadIO m)
+  :: forall m f. (MonadIO m, Functor f, Foldable f)
   => Environment
   -> (Compiler, ReleaseTag Compiler, PackageName, ReleaseTag Package)
-  -> Vector (BuildLog ByteString64)
-  -> m (Vector (BuildLog String))
+  -> f (BuildLog ByteString64)
+  -> m (f (BuildLog String))
 putBuildLogs (Environment{envConfig = Config{..}, ..}) entry buildLogs = do
   liftIO $ runResourceT $ do
     forM_ buildLogs $ \(BuildLog{buildLogCommand = Command{..}, ..}) ->
@@ -115,8 +123,16 @@ putBuildLogs (Environment{envConfig = Config{..}, ..}) entry buildLogs = do
       BuildLog
         (buildLogCommand buildLog)
         (CommandLog
-           (storedLogURL s3Bucket (entryToFilename entry) "stdout" <$ stdout (buildLogCommandLog buildLog))
-           (storedLogURL s3Bucket (entryToFilename entry) "stderr" <$ stderr (buildLogCommandLog buildLog))
+           (storedLogURL
+             s3Bucket
+             (entryToFilename entry)
+             (Text.unpack $ commandIdentifier $ buildLogCommand buildLog)             
+             "stdout" <$ stdout (buildLogCommandLog buildLog))
+           (storedLogURL
+             s3Bucket
+             (entryToFilename entry)
+             (Text.unpack $ commandIdentifier $ buildLogCommand buildLog)
+             "stderr" <$ stderr (buildLogCommandLog buildLog))
            (exitCode (buildLogCommandLog buildLog)))
     putFile :: S3.Bucket -> Text -> [(Text, Text)] -> ByteString64 -> S3.PutObject
     putFile bucket fileName metadata content =
@@ -127,10 +143,10 @@ putBuildLogs (Environment{envConfig = Config{..}, ..}) entry buildLogs = do
         , S3.poContentType = Just "text/plain"
         }
 
-storedLogURL :: S3.Bucket -> Text -> String -> String
-storedLogURL bucket filename logType =
-  "https://" <> Text.unpack bucket <> ".s3-website-eu-west-1.amazonaws.com/"
-             <> Text.unpack filename <> "/" <> logType
+storedLogURL :: S3.Bucket -> Text -> String -> String -> String
+storedLogURL bucket filename commandId logType =
+  "https://s3-eu-west-1.amazonaws.com/" <> Text.unpack bucket <> "/" <> Text.unpack filename
+                                        <> "/" <> commandId <> "/" <> logType
   
 
 entryToFilename :: (Compiler, ReleaseTag Compiler, PackageName, ReleaseTag Package) -> Text

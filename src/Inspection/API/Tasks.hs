@@ -71,7 +71,9 @@ syncTaskQueue
   :: IORef GithubCache -> Manager -> AuthToken -> [Compiler] -> [GithubLocation] -> ReleaseFilter
   -> ExceptT GH.Error IO TaskQueue
 syncTaskQueue cacheRef manager token compilers githubLocations releaseFilter = do
+  liftIO $ putStrLn "Fetching targets"
   targets <- syncTargets cacheRef manager token githubLocations releaseFilter
+  liftIO $ putStrLn "Fetching buildConfigs"
   buildConfigs <- syncBuildConfigs cacheRef manager token compilers releaseFilter
   pure $ TaskQueue $ Set.fromList
                        [ Task buildConfig target
@@ -88,7 +90,7 @@ syncTargets
   :: IORef GithubCache -> Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter
   -> ExceptT GH.Error IO (Vector Target)
 syncTargets cacheRef manager (toGithubAuth -> auth) locations releaseFilter =
-  mconcat <$> mapM (\(l@(GithubLocation _ name)) ->
+  mconcat <$> mapM (\(l@(GithubLocation _ name)) -> do
                         fmap (fmap (Target name))
                           $ runGithubM cacheRef manager auth
                           $ getReleaseTags l releaseFilter)

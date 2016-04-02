@@ -9,6 +9,7 @@ module Compiler
 
 import           Control.Monad    (unless, void, mfilter)
 import           Data.Monoid      ((<>))
+import           Data.Char        (isSpace)
 import qualified Data.Text        as Text
 import           Data.String      (fromString)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist)
@@ -69,8 +70,8 @@ runBuild psc tag sources ffiSources = do
         [ BuildLogStorage.BuildLog
             (BuildLogStorage.Command "psc" (fromString (psc <> " " <> unwords args)))
             (BuildLogStorage.CommandLog
-              (fromString <$> (mfilter null (Just stdout)))
-              (fromString <$> (mfilter null (Just stderr)))
+              (fromString <$> (mfilter (not . null . (filter (not . isSpace))) (Just stdout)))
+              (fromString <$> (mfilter (not . null . (filter (not . isSpace))) (Just stderr)))
               (case exitcode of
                  ExitSuccess -> 0
                  ExitFailure code -> code))

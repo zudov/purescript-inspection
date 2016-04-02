@@ -67,7 +67,7 @@ instance ToJSON GetBuildResults where
   toJSON = toJSON . runGetBuildResults
 
 instance ToHtml GetBuildResults where
-  toHtml (GetBuildResults entries) = do
+  toHtml (GetBuildResults entries') = do
     table_ $ do
       thead_ $ do
         tr_ $ do
@@ -75,7 +75,7 @@ instance ToHtml GetBuildResults where
           th_ "Compiler"
           th_ "Result"
       tbody_ $ do
-        forM_ entries $ \(Entry{entryTarget = Target{..}, entryBuildConfig = BuildConfig{..},..}) -> do
+        forM_ entries' $ \(Entry{entryTarget = Target{..}, entryBuildConfig = BuildConfig{..},..}) -> do
           tr_ $ do
             td_ $ do
               toHtml targetPackageName
@@ -87,6 +87,7 @@ instance ToHtml GetBuildResults where
               toHtml $ buildConfigCompilerRelease
             td_ $ do
               toHtml $ show entryBuildResult
+  toHtmlRaw a = toHtml a
     
 buildMatrixServer :: ServerT BuildMatrixAPI Inspector
 buildMatrixServer = getBuildResults
@@ -148,11 +149,11 @@ addBuildResult (Just (toGithubAuth -> auth)) packageName packageVersion compiler
                throwError $ err404 { errBody = encode $ object
                         [ "errors" .= [ "Unknown compiler version" :: String ]]}
              else do
-              _ <- BuildLogStorage.putBuildLogs
+              buildLogs <- BuildLogStorage.putBuildLogs
                      envBuildLogStorageEnv
                      (compiler, compilerVersion, packageName, packageVersion)
                      buildLogs
                      
-              let event = AddBuildResult packageName packageVersion buildConfig buildResult
+              let event = AddBuildResult packageName packageVersion buildConfig buildResult buildLogs
               currentTime <- liftIO getCurrentTime
               liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event
