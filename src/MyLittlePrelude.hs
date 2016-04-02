@@ -9,6 +9,7 @@ module MyLittlePrelude
   , module Data.Hashable
   , module Data.Monoid
   , module Data.Text
+  , module Data.Foldable
   , module Data.Typeable
   , module Data.Data
   , module Data.Vector
@@ -44,5 +45,6 @@ import Data.Time.Clock (UTCTime)
 import Data.ByteString (ByteString)
 import Data.Typeable (Typeable)
 import Data.Vector (Vector)
+import Data.Foldable (find)
 
 import GHC.Generics (Generic)

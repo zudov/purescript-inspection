@@ -26,10 +26,8 @@ import Lucid as Lucid (ToHtml(..))
 import Lucid.Html5
 import qualified Data.Text as Text
 
-import qualified Data.Vector as Vector
-
 import Inspection.Data
-import Inspection.Data.ReleaseTag (getReleaseTags, defaultReleaseFilter)
+import Inspection.Data.ReleaseTag (getRelease)
 import Inspection.Event (Event(..))
 import Inspection.API.Types
 import Inspection.BuildMatrix as BuildMatrix
@@ -37,7 +35,7 @@ import Inspection.Database
 import Inspection.EventLog (EventRecord(..), EventId)
 import Inspection.Config
 import Inspection.GithubM
-import Inspection.Data.BuildConfig (getBuildConfigs)
+import Inspection.Data.BuildConfig (compilerRepo)
 import Inspection.Data.AuthToken (toGithubAuth)
 import Inspection.BuildLogStorage (BuildLog(..), Command(..), CommandLog(..))
 import qualified Inspection.BuildLogStorage as BuildLogStorage
@@ -146,34 +144,33 @@ addBuildResult Nothing _ _ _ _ _ = do
   liftIO $ putStrLn "Nope"
   throwError err401 { errBody = encode $ object
                         ["errors" .= [ "Authorization token missing" :: String ]] }
-addBuildResult (Just (toGithubAuth -> auth)) packageName packageVersion compiler compilerVersion AddBuildResultBody{..} = do
+addBuildResult (Just (toGithubAuth -> auth)) packageName packageTag compiler compilerTag AddBuildResultBody{..} = do
   Environment{..} <- ask
   case packageLocation packageName envConfig of
     Nothing -> throwError $ err404 {errBody = encode $ object
                        [ "errors" .= [ "The package wasn't added to inspection" :: String ]]}
     Just githubLocation -> do
-      packageVersions <- lift $ withExceptT githubError
+      mPackageRelease <- lift $ withExceptT githubError
                               $ runGithubM envGithubCacheRef envManager auth
-                           (getReleaseTags githubLocation defaultReleaseFilter)
-      if packageVersion `notElem` Vector.toList packageVersions
-        then
+                                           (getRelease githubLocation packageTag)
+      case mPackageRelease of
+        Nothing ->
           throwError $ err404 { errBody = encode $ object
                    [ "errors" .= [ "Unknown package version" :: String ]]}
-        else do
-          buildConfigs <- lift $ withExceptT githubError
-                               $ runGithubM envGithubCacheRef envManager auth
-                            (getBuildConfigs compiler defaultReleaseFilter)
-          let buildConfig = BuildConfig compiler compilerVersion
-          if buildConfig `notElem` buildConfigs
-             then
+        Just packageRelease -> do
+          mCompilerRelease <- lift $ withExceptT githubError
+                                   $ runGithubM envGithubCacheRef envManager auth
+                                       (getRelease (compilerRepo compiler) compilerTag)
+          case mCompilerRelease of
+             Nothing ->
                throwError $ err404 { errBody = encode $ object
                         [ "errors" .= [ "Unknown compiler version" :: String ]]}
-             else do
+             Just compilerRelease -> do
               buildLogs_ <- BuildLogStorage.putBuildLogs
                      envBuildLogStorageEnv
-                     (compiler, compilerVersion, packageName, packageVersion)
+                     (compiler, compilerTag, packageName, packageTag)
                      buildLogs
                      
-              let event = AddBuildResult packageName packageVersion buildConfig buildResult buildLogs_
+              let event = AddBuildResult packageName packageTag (BuildConfig compiler compilerTag) buildResult buildLogs_
               currentTime <- liftIO getCurrentTime
               liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event

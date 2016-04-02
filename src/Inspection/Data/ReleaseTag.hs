@@ -19,6 +19,7 @@ module Inspection.Data.ReleaseTag
   , getReleaseTags
   , ReleaseFilter(..)
   , defaultReleaseFilter
+  , getRelease
   ) where
 
 import Prelude ()
@@ -106,7 +107,12 @@ getReleases (GithubLocation owner repo) releaseFilter =
       (GH.PagedQuery (Text.unpack <$> ["repos", toUrlPiece owner, toUrlPiece repo, "releases"])
                      []
                      Nothing)
+getRelease :: GithubLocation -> ReleaseTag entity -> GithubM (Maybe (Release entity))
+getRelease location tag =
+  find ((tag ==) . releaseTag ) <$> getReleases location defaultReleaseFilter
+  
 
 getReleaseTags :: GithubLocation -> ReleaseFilter -> GithubM (Vector (ReleaseTag entity))
 getReleaseTags location releaseFilter =
   fmap releaseTag <$> getReleases location releaseFilter
+
