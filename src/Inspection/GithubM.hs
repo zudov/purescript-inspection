@@ -35,7 +35,7 @@ import Data.IORef
 
 import qualified GitHub as GH
 
-type GithubM = Program (GH.Request 'True)
+newtype GithubM a = GithubM (Program (GH.Request 'True) a)
 
 instance Hashable GH.Auth
 
@@ -105,14 +105,14 @@ runGithubM
   :: forall a m. (MonadIO m, MonadCatch m, MonadError GH.Error m)
   => IORef GithubCache -> HTTP.Manager -> GH.Auth -> GithubM a
   -> m a
-runGithubM cacheRef mgr token m =
+runGithubM cacheRef mgr token (GithubM m) =
   case view m of
     Return a   -> pure a
     req :>>= k -> do
       cache <- liftIO $ readIORef cacheRef
       (b, cache') <- runWriterT (executeCachedRequest mgr token cache req)
       liftIO $ modifyIORef' cacheRef (cache' <>)
-      runGithubM cacheRef mgr token (k b)
+      runGithubM cacheRef mgr token (GithubM $ k b)
 
 runGithubM'
   :: forall a m. (MonadIO m, MonadCatch m, MonadError GH.Error m)
@@ -123,4 +123,4 @@ runGithubM' auth m = do
   runGithubM cacheRef manager auth m
 
 githubRequest :: forall a. GH.Request 'True a -> GithubM a
-githubRequest = singleton
+githubRequest = GithubM . singleton
