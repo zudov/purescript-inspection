@@ -13,6 +13,8 @@ import Control.Monad.IO.Class as X
        (MonadIO, liftIO)
 import Control.Monad.Reader.Class as X
        (MonadReader, ask)
+import Control.Error.Util as X
+       (failWith, failWithM, (??))
 
 import Data.Hashable as X
        (Hashable)

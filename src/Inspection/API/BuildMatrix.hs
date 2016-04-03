@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -150,11 +151,17 @@ addBuildResult Nothing _ _ _ _ _ =
   throwError err401 { errBody = encode $ object
                         ["errors" .= [ "Authorization token missing" :: String ]] }
 addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildResultBody{..} = do
-  Environment{..} <- ask
-  eErr <- checkInput
-  case eErr of
-    Left err -> throwError $ err404 { errBody = encode $ object [ "errrors" .= [err]]}
-    Right () -> do
+  env@Environment{..} <- ask
+  user <- liftGithubMAuth auth $ githubRequest userInfoCurrentR
+  githubLocation <- either throwError pure =<< liftGithubM (resolvePackage env)
+  authorized <- liftGithubM $ authorize user githubLocation env
+  if not authorized
+    then
+      throwError
+        err403 { errBody = encode $ object
+                  [ "errors" .=
+                    [ "You aren't a collaborator to the package/compiler in question" :: String ] ] }
+    else do
       buildLogs_ <- BuildLogStorage.putBuildLogs
                       envBuildLogStorageEnv
                       (compiler, compilerTag, packageName, packageTag)
@@ -163,33 +170,36 @@ addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildR
       currentTime <- liftIO getCurrentTime
       liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event
   where
-    checkInput :: Inspector (Either Text ())
-    checkInput = do
-      Environment{..} <- ask
-      User{ userLogin = userLogin } <- liftGithubMAuth auth $ githubRequest userInfoCurrentR
-      liftGithubM $ do
-        case packageLocation packageName envConfig of
-          Nothing -> pure $ Left "The package wasn't added to inspection"
-          Just githubLocation -> do
-          isPackageComrad <- githubRequest
-                           $ isCollaboratorOnR
-                               (toOwnerName (githubOwner githubLocation))
-                               (toRepoName packageName)
-                                userLogin
-          isCompilerComrad <- githubRequest
-                            $ isCollaboratorOnR
-                                (toOwnerName (githubOwner (compilerRepo compiler)))
-                                (toRepoName (githubPackageName (compilerRepo compiler)))
-                                userLogin
-          let isCommissar = githubOwner githubLocation `elem` superusers envConfig
-          if not (isCommissar || isPackageComrad || isCompilerComrad)
-            then pure $ Left "You aren't a collaborator to the package/compiler in question"
-            else do
-              mPackageRelease <- getRelease githubLocation packageTag
-              case mPackageRelease of
-                Nothing -> pure $ Left "Unknown package version"
-                Just _ -> do
-                  mCompilerRelease <- getRelease (compilerRepo compiler) compilerTag
-                  case mCompilerRelease of
-                    Just _ -> pure $ Right ()
-                    Nothing -> pure $ Left "Unknown compiler version"
+    resolvePackage :: Environment -> GithubM (Either ServantErr GithubLocation)
+    resolvePackage Environment{..} = runExceptT $ do
+      location <-
+        failWith
+          err404 { errBody = encode $ object
+                     [ "errors" .= [ "The package hasn't been enlisted for inspection" :: String ] ] }
+          (packageLocation packageName envConfig)
+      _packageRelease <-
+        failWithM
+          err404 { errBody = encode $ object
+                     [ "errors" .= [ "Unknown package version" :: String ] ]}
+          (getRelease location packageTag)
+      _compilerRelease <-
+        failWithM
+          err404 { errBody = encode $ object [ "errors" .= [ "Unknown compiler version" :: String ] ] }
+          (getRelease (compilerRepo compiler) compilerTag)
+      pure location
+
+    authorize :: User -> GithubLocation -> Environment -> GithubM Bool
+    authorize user package Environment{..} = do
+      fmap or $ sequence
+        [ githubRequest $ -- package's comrade?
+            isCollaboratorOnR
+              (toOwnerName (githubOwner package))
+              (toRepoName packageName)
+              (userLogin user)
+         , githubRequest $ -- compiler's comrade ?
+             isCollaboratorOnR
+               (toOwnerName (githubOwner (compilerRepo compiler)))
+               (toRepoName (githubPackageName (compilerRepo compiler)))
+               (userLogin user)
+         , pure (githubOwner package `elem` superusers envConfig) -- commissar?
+         ]
