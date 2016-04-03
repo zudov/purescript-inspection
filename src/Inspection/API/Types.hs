@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
@@ -5,12 +6,17 @@ module Inspection.API.Types
   ( Environment(..)
   , Inspector
   , inspectorToEither
+  , liftGithubM
   , githubError
   ) where
 
-import Control.Monad.Reader       (ReaderT ())
+import Prelude ()
+import MyLittlePrelude
+
+import Control.Monad.Reader       (ReaderT (), ask)
 import Control.Monad.Trans.Either (EitherT ())
-import Control.Monad.Except       (ExceptT())
+import Control.Monad.Except       (ExceptT(), withExceptT)
+import Control.Monad.Trans        (lift)
 import Control.Category
 
 import Data.Acid           (AcidState ())
@@ -21,6 +27,7 @@ import Data.Aeson.Extra
 
 import Inspection.Database
 import Inspection.Flags
+import Inspection.Data.AuthToken (toGithubAuth)
 import Inspection.Config
 import Inspection.GithubM
 import qualified GitHub as GH
@@ -40,6 +47,12 @@ type Inspector = ReaderT Environment (ExceptT ServantErr IO)
 
 inspectorToEither :: Environment -> Inspector :~> ExceptT ServantErr IO
 inspectorToEither = runReaderTNat
+
+liftGithubM :: GithubM a -> Inspector a
+liftGithubM m = do
+  Environment{..} <- ask
+  lift $ withExceptT githubError
+       $ runGithubM envGithubCacheRef envManager (toGithubAuth $ githubAuthToken envFlags) m
 
 githubError :: GH.Error -> ServantErr
 githubError e = err500 { errBody = encode $ object
