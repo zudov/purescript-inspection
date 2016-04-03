@@ -148,8 +148,7 @@ addBuildResult
   -> AddBuildResultBody
   -> Inspector EventId
 addBuildResult Nothing _ _ _ _ _ =
-  throwError err401 { errBody = encode $ object
-                        ["errors" .= [ "Authorization token missing" :: String ]] }
+  throwError $ NotAuthorized "Authorization token missing"
 addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildResultBody{..} = do
   env@Environment{..} <- ask
   user <- liftGithubMAuth auth $ githubRequest userInfoCurrentR
@@ -157,10 +156,7 @@ addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildR
   authorized <- liftGithubM $ authorize user githubLocation env
   if not authorized
     then
-      throwError
-        err403 { errBody = encode $ object
-                  [ "errors" .=
-                    [ "You aren't a collaborator to the package/compiler in question" :: String ] ] }
+      throwError (NotAuthorized "You aren't a collaborator to the package/compiler in question")
     else do
       buildLogs_ <- BuildLogStorage.putBuildLogs
                       envBuildLogStorageEnv
@@ -170,21 +166,19 @@ addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildR
       currentTime <- liftIO getCurrentTime
       liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event
   where
-    resolvePackage :: Environment -> GithubM (Either ServantErr GithubLocation)
+    resolvePackage :: Environment -> GithubM (Either AppError GithubLocation)
     resolvePackage Environment{..} = runExceptT $ do
       location <-
         failWith
-          err404 { errBody = encode $ object
-                     [ "errors" .= [ "The package hasn't been enlisted for inspection" :: String ] ] }
+          (NotFound "The package hasn't been enlisted for inspection")
           (packageLocation packageName envConfig)
       _packageRelease <-
         failWithM
-          err404 { errBody = encode $ object
-                     [ "errors" .= [ "Unknown package version" :: String ] ]}
+          (NotFound "Unknown package version")
           (getRelease location packageTag)
       _compilerRelease <-
         failWithM
-          err404 { errBody = encode $ object [ "errors" .= [ "Unknown compiler version" :: String ] ] }
+          (NotFound "Unknown compiler version")
           (getRelease (compilerRepo compiler) compilerTag)
       pure location
 

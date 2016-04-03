@@ -53,7 +53,7 @@ getQueue
   -> Inspector TaskQueue
 getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeCompleted = do
   Environment{..} <- ask
-  tasks <- lift $ withExceptT githubError $ syncTaskQueue
+  tasks <- lift $ withExceptT GithubError $ syncTaskQueue
              envGithubCacheRef
              envManager (githubAuthToken envFlags)
              (maybe (Config.compilers envConfig) (:[]) mCompiler)
