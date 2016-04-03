@@ -58,7 +58,7 @@ getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeComplete
              envManager (githubAuthToken envFlags)
              (maybe (Config.compilers envConfig) (:[]) mCompiler)
              (maybe (Config.packages envConfig) (:[])
-                    (`Config.packageLocation` envConfig) =<< mPackageName)
+                    ((`Config.packageLocation` envConfig) =<< mPackageName))
              (Config.releaseFilter envConfig)
   let selectedTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion tasks
   if includeCompleted
