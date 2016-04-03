@@ -7,9 +7,11 @@ import Data.Aeson.Extra
 import Data.Yaml (decodeFileEither)
 
 import Inspection.Data
+import Inspection.Data.ReleaseTag (GithubOwner)
 
 data Config
-  = Config { compilers     :: [Compiler]
+  = Config { superusers    :: [GithubOwner]
+           , compilers     :: [Compiler]
            , packages      :: [GithubLocation]
            , releaseFilter :: ReleaseFilter
            }

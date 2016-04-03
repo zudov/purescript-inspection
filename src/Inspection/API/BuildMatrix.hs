@@ -26,6 +26,10 @@ import Lucid (ToHtml(..))
 import Lucid.Html5
 import qualified Data.Text as Text
 
+import GitHub.Endpoints.Users (userInfoCurrentR)
+import GitHub.Endpoints.Repos.Collaborators (isCollaboratorOnR)
+import GitHub.Data.Definitions (User(..))
+
 import Inspection.Data
 import Inspection.Data.ReleaseTag (getRelease)
 import Inspection.Event (Event(..))
@@ -35,6 +39,8 @@ import Inspection.Database
 import Inspection.EventLog (EventRecord(..), EventId)
 import Inspection.Config
 import Inspection.GithubM
+import Inspection.Data.PackageName (toRepoName)
+import Inspection.Data.ReleaseTag (toOwnerName, githubOwner)
 import Inspection.Data.BuildConfig (compilerRepo)
 import Inspection.Data.AuthToken (toGithubAuth)
 import Inspection.BuildLogStorage (BuildLog(..), Command(..), CommandLog(..))
@@ -143,33 +149,47 @@ addBuildResult
 addBuildResult Nothing _ _ _ _ _ =
   throwError err401 { errBody = encode $ object
                         ["errors" .= [ "Authorization token missing" :: String ]] }
-addBuildResult (Just (toGithubAuth -> auth)) packageName packageTag compiler compilerTag AddBuildResultBody{..} = do
+addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildResultBody{..} = do
   Environment{..} <- ask
-  case packageLocation packageName envConfig of
-    Nothing -> throwError $ err404 {errBody = encode $ object
-                       [ "errors" .= [ "The package wasn't added to inspection" :: String ]]}
-    Just githubLocation -> do
-      mPackageRelease <- lift $ withExceptT githubError
-                              $ runGithubM envGithubCacheRef envManager auth
-                                           (getRelease githubLocation packageTag)
-      case mPackageRelease of
-        Nothing ->
-          throwError $ err404 { errBody = encode $ object
-                   [ "errors" .= [ "Unknown package version" :: String ]]}
-        Just packageRelease -> do
-          mCompilerRelease <- lift $ withExceptT githubError
-                                   $ runGithubM envGithubCacheRef envManager auth
-                                       (getRelease (compilerRepo compiler) compilerTag)
-          case mCompilerRelease of
-             Nothing ->
-               throwError $ err404 { errBody = encode $ object
-                        [ "errors" .= [ "Unknown compiler version" :: String ]]}
-             Just compilerRelease -> do
-              buildLogs_ <- BuildLogStorage.putBuildLogs
-                     envBuildLogStorageEnv
-                     (compiler, compilerTag, packageName, packageTag)
-                     buildLogs
-                     
-              let event = AddBuildResult packageName packageTag (BuildConfig compiler compilerTag) buildResult buildLogs_
-              currentTime <- liftIO getCurrentTime
-              liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event
+  eErr <- checkInput
+  case eErr of
+    Left err -> throwError $ err404 { errBody = encode $ object [ "errrors" .= [err]]}
+    Right () -> do
+      buildLogs_ <- BuildLogStorage.putBuildLogs
+                      envBuildLogStorageEnv
+                      (compiler, compilerTag, packageName, packageTag)
+                      buildLogs
+      let event = AddBuildResult packageName packageTag (BuildConfig compiler compilerTag) buildResult buildLogs_
+      currentTime <- liftIO getCurrentTime
+      liftIO $ update envAcid $ AddEventRecord $ EventRecord currentTime event
+  where
+    checkInput :: Inspector (Either Text ())
+    checkInput = do
+      Environment{..} <- ask
+      User{ userLogin = userLogin } <- liftGithubMAuth auth $ githubRequest userInfoCurrentR
+      liftGithubM $ do
+        case packageLocation packageName envConfig of
+          Nothing -> pure $ Left "The package wasn't added to inspection"
+          Just githubLocation -> do
+          isPackageComrad <- githubRequest
+                           $ isCollaboratorOnR
+                               (toOwnerName (githubOwner githubLocation))
+                               (toRepoName packageName)
+                                userLogin
+          isCompilerComrad <- githubRequest
+                            $ isCollaboratorOnR
+                                (toOwnerName (githubOwner (compilerRepo compiler)))
+                                (toRepoName (githubPackageName (compilerRepo compiler)))
+                                userLogin
+          let isCommissar = githubOwner githubLocation `elem` superusers envConfig
+          if not (isCommissar || isPackageComrad || isCompilerComrad)
+            then pure $ Left "You aren't a collaborator to the package/compiler in question"
+            else do
+              mPackageRelease <- getRelease githubLocation packageTag
+              case mPackageRelease of
+                Nothing -> pure $ Left "Unknown package version"
+                Just _ -> do
+                  mCompilerRelease <- getRelease (compilerRepo compiler) compilerTag
+                  case mCompilerRelease of
+                    Just _ -> pure $ Right ()
+                    Nothing -> pure $ Left "Unknown compiler version"

@@ -13,6 +13,7 @@ module Inspection.Data.ReleaseTag
   , Release(..)
   , GithubLocation(..)
   , GithubOwner
+  , toOwnerName
   , IsGithubOwner
   , getReleases
   , getReleaseTags
@@ -78,6 +79,9 @@ instance Predicate IsGithubOwner Text where
   validate _ _ = Nothing
 
 type GithubOwner = Refined IsGithubOwner Text
+
+toOwnerName :: GithubOwner -> GH.Name GH.Owner
+toOwnerName = GH.mkName (Proxy :: Proxy GH.Owner) . unrefine
 
 instance FromJSON GithubLocation where
   parseJSON (String (Text.splitOn "/" -> [owner, packageName])) =

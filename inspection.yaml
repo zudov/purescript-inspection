@@ -1,3 +1,6 @@
+superusers:
+  - "zudov"
+
 compilers:
   - "purescript"
 

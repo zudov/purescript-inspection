@@ -7,6 +7,7 @@ module Inspection.API.Types
   , Inspector
   , inspectorToEither
   , liftGithubM
+  , liftGithubMAuth
   , githubError
   ) where
 
@@ -27,7 +28,7 @@ import Data.Aeson.Extra
 
 import Inspection.Database
 import Inspection.Flags
-import Inspection.Data.AuthToken (toGithubAuth)
+import Inspection.Data.AuthToken (AuthToken, toGithubAuth)
 import Inspection.Config
 import Inspection.GithubM
 import qualified GitHub as GH
@@ -53,6 +54,12 @@ liftGithubM m = do
   Environment{..} <- ask
   lift $ withExceptT githubError
        $ runGithubM envGithubCacheRef envManager (toGithubAuth $ githubAuthToken envFlags) m
+
+liftGithubMAuth :: AuthToken -> GithubM a -> Inspector a
+liftGithubMAuth auth m = do
+  Environment{..} <- ask
+  lift $ withExceptT githubError
+       $ runGithubM envGithubCacheRef envManager (toGithubAuth auth) m
 
 githubError :: GH.Error -> ServantErr
 githubError e = err500 { errBody = encode $ object
