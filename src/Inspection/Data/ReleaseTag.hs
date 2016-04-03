@@ -23,6 +23,7 @@ module Inspection.Data.ReleaseTag
 
 import Prelude ()
 import MyLittlePrelude
+import Control.Monad.Except (catchError)
 
 import qualified Data.Vector        as Vector
 import qualified Data.Text          as Text
@@ -108,7 +109,7 @@ getReleases (GithubLocation owner repo) releaseFilter =
                      Nothing)
 getRelease :: GithubLocation -> ReleaseTag entity -> GithubM (Maybe (Release entity))
 getRelease location tag =
-  find ((tag ==) . releaseTag ) <$> getReleases location defaultReleaseFilter
+  catchNotFound Nothing (find ((tag ==) . releaseTag ) <$> getReleases location defaultReleaseFilter)
   
 
 getReleaseTags :: GithubLocation -> ReleaseFilter -> GithubM (Vector (ReleaseTag entity))

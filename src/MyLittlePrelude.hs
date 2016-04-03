@@ -2,6 +2,8 @@ module MyLittlePrelude (module X) where
 
 import Prelude as X hiding ((.), id)
 
+import Control.Applicative as X
+       (liftA, liftA2)
 import Control.Category as X
        (Category, id, (.), (<<<), (>>>))
 

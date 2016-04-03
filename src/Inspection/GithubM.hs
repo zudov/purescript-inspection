@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Inspection.GithubM where
 
@@ -18,7 +20,7 @@ import Control.Monad.Catch (MonadCatch(..), try)
 import Control.Monad.Operational
 
 import Control.Monad.Writer.Strict
-import Control.Monad.Except (MonadError(..))
+import Control.Monad.Except (MonadError(..), ExceptT(..), runExceptT)
 
 import qualified Data.Vector as Vector
 import qualified Data.ByteString as BS
@@ -35,7 +37,31 @@ import Data.IORef
 
 import qualified GitHub as GH
 
-newtype GithubM a = GithubM (Program (GH.Request 'True) a)
+data GithubOp a where
+  PerformRequest :: GH.Request 'True a -> GithubOp a
+  ThrowError :: GH.Error -> GithubOp a
+  CatchError :: Program GithubOp a -> (GH.Error -> Program GithubOp a) -> GithubOp a
+
+newtype GithubM a
+  = GithubM { unGithubM :: Program GithubOp a }
+  deriving (Functor)
+
+instance Applicative GithubM where
+  pure = GithubM . pure
+  (GithubM mf) <*> (GithubM ma) = GithubM (mf <*> ma)
+
+instance Monad GithubM where
+  (GithubM ma) >>= f = join $ GithubM (ma >>= pure . f)
+
+instance MonadError GH.Error GithubM where
+  throwError = GithubM . singleton . ThrowError
+  catchError (GithubM m) handler = GithubM $ singleton $ CatchError m (unGithubM . handler)
+
+catchNotFound :: a -> GithubM a -> GithubM a
+catchNotFound a m =
+  m `catchError`
+    \case GH.HTTPError (HTTP.StatusCodeException (Status 404 _) _ _) -> pure a
+          err -> throwError err
 
 instance Hashable GH.Auth
 
@@ -51,26 +77,26 @@ instance Monoid GithubCache where
   mappend (GithubCache a) (GithubCache b) = GithubCache (mappend a b)
 
 executeCachedRequest
-  :: forall k a m. (MonadIO m, MonadCatch m, MonadError GH.Error m, MonadWriter GithubCache m)
-  => HTTP.Manager -> GH.Auth -> GithubCache -> GH.Request k a -> m a
+  :: forall k a m. (MonadIO m, MonadCatch m, MonadWriter GithubCache m)
+  => HTTP.Manager -> GH.Auth -> GithubCache -> GH.Request k a -> m (Either GH.Error a)
 executeCachedRequest mgr auth ghCache ghReq = do
   liftIO $ print ghReq
   case ghReq of
-    GH.Query {} ->
+    GH.Query {} -> runExceptT $
       GH.makeHttpRequest (Just auth) ghReq
         >>= cachedHttpLbs ghCache
         >>= GH.parseResponse
 
-    GH.PagedQuery _ _ l ->
+    GH.PagedQuery _ _ l -> runExceptT $
       GH.makeHttpRequest (Just auth) ghReq
         >>= GH.performPagedRequest
                (cachedHttpLbs ghCache)
                (maybe (const True) (\l' -> (< l') . Vector.length) l)
-    _ -> either throwError pure =<< liftIO (GH.executeRequestWithMgr mgr auth ghReq)
+    _ -> liftIO (GH.executeRequestWithMgr mgr auth ghReq)
 
   where
     cachedHttpLbs
-      :: GithubCache -> HTTP.Request -> m (HTTP.Response LBS.ByteString)
+      :: GithubCache -> HTTP.Request -> ExceptT GH.Error m (HTTP.Response LBS.ByteString)
     cachedHttpLbs (GithubCache cache) httpReq = do
        liftIO $ putStrLn resourceUrl
        try (liftIO $ HTTP.httpLbs conditionalHttpReq mgr) >>= \case
@@ -105,14 +131,23 @@ runGithubM
   :: forall a m. (MonadIO m, MonadCatch m, MonadError GH.Error m)
   => IORef GithubCache -> HTTP.Manager -> GH.Auth -> GithubM a
   -> m a
-runGithubM cacheRef mgr token (GithubM m) =
-  case view m of
-    Return a   -> pure a
-    req :>>= k -> do
+runGithubM cacheRef mgr token (GithubM m) = eval $ view m
+  where
+   eval = \case
+    Return a  -> pure a
+    ThrowError err :>>= _ -> throwError err
+    CatchError m' handler :>>= k -> do
+      b <- runGithubM cacheRef mgr token (GithubM m')
+             `catchError` (runGithubM cacheRef mgr token . GithubM . handler)
+      runGithubM cacheRef mgr token $ GithubM $ k b
+    PerformRequest req :>>= k -> do
       cache <- liftIO $ readIORef cacheRef
-      (b, cache') <- runWriterT (executeCachedRequest mgr token cache req)
-      liftIO $ modifyIORef' cacheRef (cache' <>)
-      runGithubM cacheRef mgr token (GithubM $ k b)
+      (eb, cache') <- runWriterT (executeCachedRequest mgr token cache req)
+      case eb of
+        Left err -> throwError err
+        Right b -> do
+          liftIO $ modifyIORef' cacheRef (cache' <>)
+          runGithubM cacheRef mgr token (GithubM $ k b)
 
 runGithubM'
   :: forall a m. (MonadIO m, MonadCatch m, MonadError GH.Error m)
@@ -123,4 +158,4 @@ runGithubM' auth m = do
   runGithubM cacheRef manager auth m
 
 githubRequest :: forall a. GH.Request 'True a -> GithubM a
-githubRequest = GithubM . singleton
+githubRequest = GithubM . singleton . PerformRequest
