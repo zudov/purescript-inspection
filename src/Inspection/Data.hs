@@ -1,19 +1,17 @@
-module Inspection.Data
-  ( module Inspection.Data.Package
-  , module Inspection.Data.ReleaseTag
-  , module Inspection.Data.PackageName
-  , module Inspection.Data.Target
-  , module Inspection.Data.Task
-  , module Inspection.Data.BuildConfig
-  , module Inspection.Data.AuthToken
-  , module Inspection.Data.BuildResult
-  ) where
+module Inspection.Data (module X) where
 
-import Inspection.Data.BuildConfig (BuildConfig(..), Compiler(..))
-import Inspection.Data.Package (Package(..))
-import Inspection.Data.ReleaseTag (ReleaseTag(..), GithubLocation(..), ReleaseFilter(..))
-import Inspection.Data.PackageName (PackageName(..))
-import Inspection.Data.Target (Target(..))
-import Inspection.Data.AuthToken (AuthToken(..))
-import Inspection.Data.BuildResult (BuildResult(..))
-import Inspection.Data.Task (Task(..))
+import Inspection.Data.BuildConfig as X
+       (BuildConfig(..), Compiler(..))
+import Inspection.Data.Package as X (Package(..))
+import Inspection.Data.ReleaseTag as X
+       (ReleaseTag(), GithubLocation(..), ReleaseFilter(..))
+import Inspection.Data.PackageName as X
+       (PackageName())
+import Inspection.Data.Target as X
+       (Target(..))
+import Inspection.Data.AuthToken as X
+       (AuthToken(..))
+import Inspection.Data.BuildResult as X
+       (BuildResult(..))
+import Inspection.Data.Task as X
+       (Task(..))

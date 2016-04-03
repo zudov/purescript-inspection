@@ -22,7 +22,7 @@ import           Data.ByteString.Base64.Type (ByteString64)
 import Data.Acid (query, update)
 import Servant
 import Servant.HTML.Lucid
-import Lucid as Lucid (ToHtml(..))
+import Lucid (ToHtml(..))
 import Lucid.Html5
 import qualified Data.Text as Text
 
@@ -67,32 +67,32 @@ instance ToJSON GetBuildResults where
   toJSON = toJSON . runGetBuildResults
 
 instance ToHtml GetBuildResults where
-  toHtml (GetBuildResults entries') = do
+  toHtml (GetBuildResults entries') =
     table_ $ do
-      thead_ $ do
+      thead_ $
         tr_ $ do
           th_ "Target"
           th_ "Compiler"
           th_ "Result"
           th_ "Logs"
-      tbody_ $ do
-        forM_ entries' $ \(Entry{entryTarget = Target{..}, entryBuildConfig = BuildConfig{..},..}) -> do
+      tbody_ $
+        forM_ entries' $ \Entry{entryTarget = Target{..}, entryBuildConfig = BuildConfig{..},..} ->
           tr_ $ do
             td_ $ do
               toHtml targetPackageName
               "-"
               toHtml targetReleaseTag
             td_ $ do
-              toHtml $ toUrlPiece $ buildConfigCompiler
+              toHtml $ toUrlPiece buildConfigCompiler
               "-"
-              toHtml $ buildConfigCompilerRelease
-            td_ $ do
+              toHtml buildConfigCompilerRelease
+            td_ $
               toHtml $ show entryBuildResult
-            td_ $ do
-              ul_ $ do
+            td_ $
+              ul_ $
                 forM_ entryLogs $
-                  \(BuildLog{ buildLogCommand = Command{..}
-                            , buildLogCommandLog = CommandLog{..} }) -> do
+                  \BuildLog{ buildLogCommand = Command{..}
+                           , buildLogCommandLog = CommandLog{..} } ->
                   li_ $ do
                     span_ [ title_ command] $ toHtml commandIdentifier
                     " "
@@ -105,7 +105,7 @@ instance ToHtml GetBuildResults where
 
                     
                 
-  toHtmlRaw a = toHtml a
+  toHtmlRaw = toHtml
     
 buildMatrixServer :: ServerT BuildMatrixAPI Inspector
 buildMatrixServer = getBuildResults
@@ -140,8 +140,7 @@ addBuildResult
   -> Compiler -> ReleaseTag Compiler
   -> AddBuildResultBody
   -> Inspector EventId
-addBuildResult Nothing _ _ _ _ _ = do
-  liftIO $ putStrLn "Nope"
+addBuildResult Nothing _ _ _ _ _ =
   throwError err401 { errBody = encode $ object
                         ["errors" .= [ "Authorization token missing" :: String ]] }
 addBuildResult (Just (toGithubAuth -> auth)) packageName packageTag compiler compilerTag AddBuildResultBody{..} = do

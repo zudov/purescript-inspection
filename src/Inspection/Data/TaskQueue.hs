@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
 module Inspection.Data.TaskQueue
   ( TaskQueue(..)
   , addTask

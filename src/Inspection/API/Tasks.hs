@@ -58,7 +58,7 @@ getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeComplete
              envManager (githubAuthToken envFlags)
              (maybe (Config.compilers envConfig) (:[]) mCompiler)
              (maybe (Config.packages envConfig) (:[])
-                    ((flip Config.packageLocation envConfig) =<< mPackageName))
+                    (`Config.packageLocation` envConfig) =<< mPackageName)
              (Config.releaseFilter envConfig)
   let selectedTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion tasks
   if includeCompleted
@@ -84,13 +84,13 @@ syncBuildConfigs
   :: IORef GithubCache -> Manager -> AuthToken -> [Compiler] -> ReleaseFilter
   -> ExceptT GH.Error IO (Vector BuildConfig)
 syncBuildConfigs cacheRef manager (toGithubAuth -> auth) compilers releaseFilter =
-  mconcat <$> mapM ((\c -> runGithubM cacheRef manager auth $ getBuildConfigs c releaseFilter)) compilers
+  mconcat <$> mapM (\c -> runGithubM cacheRef manager auth $ getBuildConfigs c releaseFilter) compilers
 
 syncTargets
   :: IORef GithubCache -> Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter
   -> ExceptT GH.Error IO (Vector Target)
 syncTargets cacheRef manager (toGithubAuth -> auth) locations releaseFilter =
-  mconcat <$> mapM (\(l@(GithubLocation _ name)) -> do
+  mconcat <$> mapM (\(l@(GithubLocation _ name)) ->
                         fmap (fmap (Target name))
                           $ runGithubM cacheRef manager auth
                           $ getReleaseTags l releaseFilter)

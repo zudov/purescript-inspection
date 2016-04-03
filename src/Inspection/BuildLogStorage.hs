@@ -47,7 +47,7 @@ loadConfig
   => m Config
 loadConfig = do
   creds <- loadAwsCredentials
-  pure $ Config
+  pure Config
     { awsConfiguration = Aws.Configuration Aws.Timestamp creds (Aws.defaultLog Aws.Debug)
     , s3Configuration  = S3.s3 Aws.HTTPS "s3-eu-west-1.amazonaws.com" False
     , s3Bucket = "build-logs.inspection.purescript.org"
@@ -100,9 +100,9 @@ putBuildLogs
   -> (Compiler, ReleaseTag Compiler, PackageName, ReleaseTag Package)
   -> f (BuildLog ByteString64)
   -> m (f (BuildLog String))
-putBuildLogs (Environment{envConfig = Config{..}, ..}) entry buildLogs = do
-  liftIO $ runResourceT $ do
-    forM_ buildLogs $ \(BuildLog{buildLogCommand = Command{..}, ..}) ->
+putBuildLogs Environment{envConfig = Config{..}, ..} entry buildLogs = do
+  liftIO $ runResourceT $
+    forM_ buildLogs $ \BuildLog{buildLogCommand = Command{..}, ..} ->
       forM (catMaybes
               [ ("stdout",) <$> stdout buildLogCommandLog
               , ("stderr",) <$> stderr buildLogCommandLog ]) $ \(logType, content) ->

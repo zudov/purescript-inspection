@@ -1,7 +1,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
@@ -79,7 +78,7 @@ executeCachedRequest mgr auth ghCache ghReq = do
          Right res -> do
            tell $ GithubCache $ HashMap.singleton (auth, resourceUrl) (LBS.toStrict <$> res)
            pure res
-         Left err@(HTTP.StatusCodeException (Status {statusCode = 304}) _ _) ->
+         Left err@(HTTP.StatusCodeException Status {statusCode = 304} _ _) ->
            maybe (throwError $ GH.HTTPError err)
                  (pure . fmap LBS.fromStrict)
                  cachedResponse

@@ -95,4 +95,4 @@ entries mCompiler mCompilerVersion mPackageName mPackageVersion (BuildMatrix mat
     $ maybe id IxSet.getEQ mPackageVersion
     $ maybe id IxSet.getEQ mCompiler
     $ maybe id IxSet.getEQ mCompilerVersion
-    $ matrix
+    matrix

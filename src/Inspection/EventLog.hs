@@ -25,7 +25,7 @@ newtype EventLog a
   deriving (Show, Eq)
 
 instance Functor EventLog where
-  fmap f (EventLog records) = EventLog $ fmap (fmap f) $ reverse records
+  fmap f (EventLog records) = EventLog $ fmap f <$> reverse records
 
 instance Foldable EventLog where
   foldMap f (EventLog records) = foldMap (foldMap f) $ reverse records

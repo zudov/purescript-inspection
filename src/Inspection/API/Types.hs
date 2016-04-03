@@ -39,7 +39,7 @@ data Environment
 type Inspector = ReaderT Environment (ExceptT ServantErr IO)
 
 inspectorToEither :: Environment -> Inspector :~> ExceptT ServantErr IO
-inspectorToEither env = runReaderTNat env
+inspectorToEither = runReaderTNat
 
 githubError :: GH.Error -> ServantErr
 githubError e = err500 { errBody = encode $ object
