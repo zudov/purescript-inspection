@@ -15,7 +15,6 @@ import MyLittlePrelude
 
 import Control.Monad.Catch (MonadCatch(..), try)
 
-import Control.Monad.Identity
 import Control.Monad.Operational
 
 import Control.Monad.Writer.Strict
@@ -30,13 +29,13 @@ import Network.URI (uriToString)
 import Network.HTTP.Types.Header
 import Network.HTTP.Types.Status
 import qualified Network.HTTP.Client as HTTP
+import qualified Network.HTTP.Client.TLS as HTTP
 
 import Data.IORef
 
 import qualified GitHub as GH
 
-type GithubT m = ProgramT (GH.Request 'True) m
-type GithubM = GithubT Identity
+type GithubM = Program (GH.Request 'True)
 
 instance Hashable GH.Auth
 
@@ -115,19 +114,13 @@ runGithubM cacheRef mgr token m =
       liftIO $ modifyIORef' cacheRef (cache' <>)
       runGithubM cacheRef mgr token (k b)
 
--- runGithubT :: forall a m. (Monad m, MonadIO m)
---            => IORef GithubCache -> HTTP.Manager -> AuthToken -> GithubT m a
---            -> ExceptT GH.Error m a
--- runGithubT cacheRef mgr token = viewT >=> eval
---   where
---     eval :: ProgramViewT (GH.Request 'True) (ExceptT GH.Error m) a -> ExceptT GH.Error m a
---     eval (Return a) = pure a
---     eval (req :>>= k) = do
---       cache <- liftIO $ readIORef cacheRef
---       undefined
---     --  liftIO (executeCachedRequest mgr token cache req) >>= \case
---     --    Right (cache', b) -> runGithubT cache' mgr token (k b)
---     --    Left err -> pure (Left err)
+runGithubM'
+  :: forall a m. (MonadIO m, MonadCatch m, MonadError GH.Error m)
+  => GH.Auth -> GithubM a -> m a
+runGithubM' auth m = do
+  manager <- liftIO $ HTTP.newManager HTTP.tlsManagerSettings
+  cacheRef <- liftIO $ newIORef mempty
+  runGithubM cacheRef manager auth m
 
-githubRequest :: forall a m. GH.Request 'True a -> GithubT m a
+githubRequest :: forall a. GH.Request 'True a -> GithubM a
 githubRequest = singleton
