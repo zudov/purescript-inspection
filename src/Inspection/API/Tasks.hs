@@ -53,45 +53,31 @@ getQueue
   -> Inspector TaskQueue
 getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeCompleted = do
   Environment{..} <- ask
-  tasks <- lift $ withExceptT GithubError $ syncTaskQueue
-             envGithubCacheRef
-             envManager (githubAuthToken envFlags)
+  tasks <- liftGithubM
+         $ syncTaskQueue 
              (maybe (Config.compilers envConfig) (:[]) mCompiler)
              (maybe (Config.packages envConfig) (:[])
-                    ((`Config.packageLocation` envConfig) =<< mPackageName))
+             ((`Config.packageLocation` envConfig) =<< mPackageName))
              (Config.releaseFilter envConfig)
   let selectedTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion tasks
   if includeCompleted
     then pure selectedTasks
     else TaskQueue.difference selectedTasks . TaskQueue.completedTasks <$> liftIO (query envAcid GetBuildMatrix)
-         
-  
 
 syncTaskQueue
-  :: IORef GithubCache -> Manager -> AuthToken -> [Compiler] -> [GithubLocation] -> ReleaseFilter
-  -> ExceptT GH.Error IO TaskQueue
-syncTaskQueue cacheRef manager token compilers githubLocations releaseFilter = do
-  liftIO $ putStrLn "Fetching targets"
-  targets <- syncTargets cacheRef manager token githubLocations releaseFilter
-  liftIO $ putStrLn "Fetching buildConfigs"
-  buildConfigs <- syncBuildConfigs cacheRef manager token compilers releaseFilter
-  pure $ TaskQueue $ Set.fromList
-                       [ Task buildConfig target
-                           | target <- Vector.toList targets
-                           , buildConfig <- Vector.toList buildConfigs ]
+  :: [Compiler] -> [GithubLocation] -> ReleaseFilter
+  -> GithubM TaskQueue
+syncTaskQueue compilers githubLocations releaseFilter =
+  (TaskQueue . Set.fromList . Vector.toList)
+       <$> (liftA2 Task <$> syncBuildConfigs compilers releaseFilter
+                        <*> syncTargets githubLocations releaseFilter)
 
-syncBuildConfigs
-  :: IORef GithubCache -> Manager -> AuthToken -> [Compiler] -> ReleaseFilter
-  -> ExceptT GH.Error IO (Vector BuildConfig)
-syncBuildConfigs cacheRef manager (toGithubAuth -> auth) compilers releaseFilter =
-  mconcat <$> mapM (\c -> runGithubM cacheRef manager auth $ getBuildConfigs c releaseFilter) compilers
+syncBuildConfigs :: [Compiler] -> ReleaseFilter -> GithubM (Vector BuildConfig)
+syncBuildConfigs compilers releaseFilter =
+  mconcat <$> mapM (`getBuildConfigs` releaseFilter) compilers
 
-syncTargets
-  :: IORef GithubCache -> Manager -> AuthToken -> [GithubLocation] -> ReleaseFilter
-  -> ExceptT GH.Error IO (Vector Target)
-syncTargets cacheRef manager (toGithubAuth -> auth) locations releaseFilter =
-  mconcat <$> mapM (\(l@(GithubLocation _ name)) ->
-                        fmap (fmap (Target name))
-                          $ runGithubM cacheRef manager auth
-                          $ getReleaseTags l releaseFilter)
-                    locations
+syncTargets :: [GithubLocation] -> ReleaseFilter -> GithubM (Vector Target)
+syncTargets locations releaseFilter = mconcat <$> mapM fromGithubLocation locations
+  where
+    fromGithubLocation l@(GithubLocation _ name) =
+      fmap (Target name) <$> getReleaseTags l releaseFilter
