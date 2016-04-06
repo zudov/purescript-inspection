@@ -51,7 +51,9 @@ getQueue
   -> Maybe PackageName -> Maybe (ReleaseTag Package)
   -> Bool
   -> Inspector TaskQueue
-getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeCompleted = do
+getQueue mCompiler mCompilerVersion
+         mPackageName mPackageVersion
+         includeCompleted = do
   Environment{..} <- ask
   tasks <- liftGithubM
          $ syncTaskQueue 
@@ -59,10 +61,14 @@ getQueue mCompiler mCompilerVersion mPackageName mPackageVersion includeComplete
              (maybe (Config.packages envConfig) (:[])
              ((`Config.packageLocation` envConfig) =<< mPackageName))
              (Config.releaseFilter envConfig)
-  let selectedTasks = selectTasks mCompiler mCompilerVersion mPackageName mPackageVersion tasks
+  let selectedTasks = selectTasks
+                        mCompiler mCompilerVersion
+                        mPackageName mPackageVersion
+                        tasks
   if includeCompleted
     then pure selectedTasks
-    else TaskQueue.difference selectedTasks . TaskQueue.completedTasks <$> liftIO (query envAcid GetBuildMatrix)
+    else TaskQueue.difference selectedTasks . TaskQueue.completedTasks
+           <$> liftIO (query envAcid GetBuildMatrix)
 
 syncTaskQueue
   :: [Compiler] -> [GithubLocation] -> ReleaseFilter
@@ -77,7 +83,8 @@ syncBuildConfigs compilers releaseFilter =
   mconcat <$> mapM (`getBuildConfigs` releaseFilter) compilers
 
 syncTargets :: [GithubLocation] -> ReleaseFilter -> GithubM (Vector Target)
-syncTargets locations releaseFilter = mconcat <$> mapM fromGithubLocation locations
-  where
-    fromGithubLocation l@(GithubLocation _ name) =
-      fmap (Target name) <$> getReleaseTags l releaseFilter
+syncTargets locations releaseFilter =
+  mconcat <$> mapM fromGithubLocation locations
+ where
+  fromGithubLocation l@(GithubLocation _ name) =
+    fmap (Target name) <$> getReleaseTags l releaseFilter
