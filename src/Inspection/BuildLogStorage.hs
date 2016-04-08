@@ -9,6 +9,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Inspection.BuildLogStorage where
 
+import Prelude ()
 import MyLittlePrelude
 
 import Control.Monad.Trans.Resource (runResourceT)
