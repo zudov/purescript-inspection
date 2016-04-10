@@ -41,7 +41,7 @@ import Inspection.EventLog (EventRecord(..), EventId)
 import Inspection.Config
 import Inspection.GithubM
 import Inspection.Data.PackageName (toRepoName)
-import Inspection.Data.ReleaseTag (toOwnerName, githubOwner)
+import Inspection.Data.ReleaseTag (toOwnerName, githubOwner, fromUserName)
 import Inspection.Data.BuildConfig (compilerRepo)
 import Inspection.Data.AuthToken (toGithubAuth)
 import Inspection.BuildLogStorage (BuildLog(..), Command(..), CommandLog(..))
@@ -184,7 +184,7 @@ addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildR
 
     authorize :: User -> GithubLocation -> Environment -> GithubM Bool
     authorize user package Environment{..} = do
-      fmap or $ sequence
+      or <$> mapM (catchForbidden False)
         [ githubRequest $ -- package's comrade?
             isCollaboratorOnR
               (toOwnerName (githubOwner package))
@@ -195,5 +195,6 @@ addBuildResult (Just auth) packageName packageTag compiler compilerTag AddBuildR
                (toOwnerName (githubOwner (compilerRepo compiler)))
                (toRepoName (githubPackageName (compilerRepo compiler)))
                (userLogin user)
-         , pure (githubOwner package `elem` superusers envConfig) -- commissar?
+         , pure (fromUserName (userLogin user)
+                   `elem` (superusers envConfig)) -- commissar?
          ]

@@ -14,6 +14,7 @@ module Inspection.Data.ReleaseTag
   , GithubLocation(..)
   , GithubOwner
   , toOwnerName
+  , fromUserName
   , IsGithubOwner
   , getReleases
   , getReleaseTags
@@ -35,6 +36,7 @@ import Web.HttpApiData (toUrlPiece)
 import Refined.Extended
 
 import qualified GitHub as GH
+import qualified GitHub.Data.Name as GH
 
 import Inspection.Data.PackageName
 import Inspection.GithubM
@@ -82,6 +84,9 @@ type GithubOwner = Refined IsGithubOwner Text
 
 toOwnerName :: GithubOwner -> GH.Name GH.Owner
 toOwnerName = GH.mkName (Proxy :: Proxy GH.Owner) . unrefine
+
+fromUserName :: GH.Name GH.User -> GithubOwner
+fromUserName = either error id . refine . GH.untagName
 
 instance FromJSON GithubLocation where
   parseJSON (String (Text.splitOn "/" -> [owner, packageName])) =

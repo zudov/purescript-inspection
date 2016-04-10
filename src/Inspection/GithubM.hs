@@ -63,6 +63,18 @@ catchNotFound a m =
     \case GH.HTTPError (HTTP.StatusCodeException (Status 404 _) _ _) -> pure a
           err -> throwError err
 
+catchUnauthorized :: a -> GithubM a -> GithubM a
+catchUnauthorized a m =
+  m `catchError`
+    \case GH.HTTPError (HTTP.StatusCodeException (Status 401 _) _ _) -> pure a
+          err -> throwError err
+
+catchForbidden :: a -> GithubM a -> GithubM a
+catchForbidden a m =
+  m `catchError`
+    \case GH.HTTPError (HTTP.StatusCodeException (Status 403 _) _ _) -> pure a
+          err -> throwError err
+
 instance Hashable GH.Auth
 
 type ResourceURL = String
