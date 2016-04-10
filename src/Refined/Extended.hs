@@ -6,6 +6,7 @@ module Refined.Extended
 
 import Refined
 
+import Data.Hashable (Hashable, hashWithSalt)
 import Data.Text as Text
 import Data.Bifunctor (first)
 import Data.String (IsString(..))
@@ -16,7 +17,10 @@ import Data.Typeable
 import Lucid (ToHtml(..))
 
 instance (Predicate p x, IsString x) => IsString (Refined p x) where
-  fromString = either error id . refine . fromString 
+  fromString = either error id . refine . fromString
+
+instance (Hashable x) => Hashable (Refined p x) where
+  hashWithSalt s = hashWithSalt s . unrefine 
 
 instance (Predicate p x, FromJSON x) => FromJSON (Refined p x) where
   parseJSON value = either fail pure . refine =<< parseJSON value
