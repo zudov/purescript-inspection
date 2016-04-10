@@ -51,7 +51,7 @@ instance Applicative GithubM where
   (GithubM mf) <*> (GithubM ma) = GithubM (mf <*> ma)
 
 instance Monad GithubM where
-  (GithubM ma) >>= f = join $ GithubM (ma >>= pure . f)
+  (GithubM ma) >>= f = GithubM (unGithubM . f =<< ma)
 
 instance MonadError GH.Error GithubM where
   throwError = GithubM . singleton . ThrowError
