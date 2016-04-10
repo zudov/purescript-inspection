@@ -19,7 +19,7 @@ module MyLittlePrelude
 import Prelude as X hiding ((.), id, undefined, error)
 
 import Control.Applicative as X
-  (liftA, liftA2)
+  ((<|>), liftA, liftA2)
 import Control.Category as X
   (Category, id, (.), (<<<), (>>>))
 
@@ -31,6 +31,9 @@ import Control.Monad.Reader.Class as X
   (MonadReader, ask)
 import Control.Error.Util as X
   (failWith, failWithM, (??))
+
+import Control.Monad.Trans.Maybe as X
+  (MaybeT(..))
 
 import Data.Hashable as X
   (Hashable)

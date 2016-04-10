@@ -130,6 +130,9 @@ executable purescript-inspection-worker
                      , http-client
                      , mtl
                      , http-client-tls
+                     , zlib
+                     , tar
+                     , bytestring
 
 test-suite purescript-inspection-test
   type:                exitcode-stdio-1.0

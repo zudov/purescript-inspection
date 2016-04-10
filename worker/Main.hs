@@ -3,6 +3,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
+import Prelude ()
+import MyLittlePrelude
+
 import           Control.Monad              (forM_, when)
 import           Control.Monad.Except       (runExceptT)
 import           Data.Monoid                ((<>))
@@ -68,7 +71,7 @@ main = do
     putStrLn $ concat [ "[", show index, "/", show (length tasks), "]: "
                       , toString packageName, "-", toString packageVersion, " using "
                       , toString compiler, "-", toString compilerVersion ]
-    psc <- getCompiler compilerVersion
+    psc <- fromMaybe (error "  Failed to fetch the compiler.") <$> getPsc compilerVersion
     withSystemTempDirectory "purescript-inspection-build" $ \tmpDir -> do
       dir <- getCurrentDirectory
       setCurrentDirectory tmpDir
@@ -84,16 +87,14 @@ main = do
               compiler compilerVersion
               (AddBuildResultBody Failure mempty)
         ExitSuccess -> do
-          buildResultBody <- runBuild (dir </> psc) compilerVersion "bower_components/purescript-*/src/**/*.purs"
-                                                                "bower_components/purescript-*/src/**/*.js"
+          setCurrentDirectory dir
+          buildResultBody <- runBuild psc "bower_components/purescript-*/src/**/*.purs"
+                                          "bower_components/purescript-*/src/**/*.js"
           putStrLn ("  Reporting: " <> show (buildResult buildResultBody))
           runExceptT $
             addBuildResult
-              manager
-              authToken
-              packageName
-              packageVersion
-              compiler
-              compilerVersion
+              manager authToken
+              packageName packageVersion
+              compiler compilerVersion
               buildResultBody
       setCurrentDirectory dir
