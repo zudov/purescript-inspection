@@ -120,7 +120,7 @@ executable purescript-inspection-worker
                      , servant-client >= 0.5
                      , process
                      , filepath
-                     , directory
+                     , directory >= 1.2.5.0
                      , either
                      , text
                      , containers

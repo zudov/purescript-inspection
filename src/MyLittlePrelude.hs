@@ -24,7 +24,7 @@ import Control.Category as X
   (Category, id, (.), (<<<), (>>>))
 
 import Control.Monad as X
-  (when, unless, (>=>), (<=<), forM, forM_, mzero, MonadPlus(..), guard)
+  (when, unless, (>=>), (<=<), forM, forM_, mzero, MonadPlus(..), guard, mfilter)
 import Control.Monad.IO.Class as X
   (MonadIO, liftIO)
 import Control.Monad.Reader.Class as X

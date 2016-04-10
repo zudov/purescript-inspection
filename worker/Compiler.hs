@@ -92,11 +92,12 @@ getPsc version = runMaybeT $ do
                 False
                 ("psc-" <> Text.unpack (unrefine version))
 
-runBuild :: Psc
+runBuild :: FilePath
+         -> Psc
          -> String -- ^ purescript sources glob
          -> String -- ^ ffi sources glob
          -> IO AddBuildResultBody
-runBuild (Psc tag psc) sources ffiSources = do
+runBuild dir (Psc tag psc) sources ffiSources = do
   putStrLn ("  Compiling")
   (exitcode, stdout, stderr) <- readProcessWithExitCode psc args ""
   let buildResult = case exitcode of

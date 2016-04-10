@@ -15,7 +15,8 @@ import           System.FilePath            ((</>))
 import           System.Directory           (doesDirectoryExist,
                                              removeDirectoryRecursive,
                                              setCurrentDirectory,
-                                             getCurrentDirectory)
+                                             getCurrentDirectory,
+                                             withCurrentDirectory)
 import           System.IO.Temp             (withSystemTempDirectory)
 import           System.Environment         (lookupEnv)
 import           System.Exit                (ExitCode (..))
@@ -72,10 +73,9 @@ main = do
                       , toString packageName, "-", toString packageVersion, " using "
                       , toString compiler, "-", toString compilerVersion ]
     psc <- fromMaybe (error "  Failed to fetch the compiler.") <$> getPsc compilerVersion
-    withSystemTempDirectory "purescript-inspection-build" $ \tmpDir -> do
+    withSystemTempDirectory "purescript-inspection-build" $ \tmpDir -> withCurrentDirectory tmpDir $ do
       dir <- getCurrentDirectory
-      setCurrentDirectory tmpDir
-      bowerExitCode <- install packageName packageVersion
+      bowerExitCode <- install dir packageName packageVersion
       case bowerExitCode of
         ExitFailure _code -> do
           putStrLn "  Reporting: bower failure"
@@ -87,9 +87,8 @@ main = do
               compiler compilerVersion
               (AddBuildResultBody Failure mempty)
         ExitSuccess -> do
-          setCurrentDirectory dir
-          buildResultBody <- runBuild psc "bower_components/purescript-*/src/**/*.purs"
-                                          "bower_components/purescript-*/src/**/*.js"
+          buildResultBody <- runBuild dir psc "bower_components/purescript-*/src/**/*.purs"
+                                              "bower_components/purescript-*/src/**/*.js"
           putStrLn ("  Reporting: " <> show (buildResult buildResultBody))
           runExceptT $
             addBuildResult
@@ -97,4 +96,3 @@ main = do
               packageName packageVersion
               compiler compilerVersion
               buildResultBody
-      setCurrentDirectory dir

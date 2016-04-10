@@ -10,4 +10,4 @@ extra-deps:
   - servant-client-0.5
   - servant-lucid-0.5
   - refined-0.1.2
-
+  - directory-1.2.5.1
